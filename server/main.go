@@ -125,14 +125,7 @@ func serve(args []string) error {
 		log.Printf("sidekick: APNs disabled: %v", err)
 	}
 	log.Printf("sidekick: native push %s, %d device(s) registered", map[bool]string{true: "on", false: "off (no APNs key)"}[srv.apns.Enabled()], srv.apns.DeviceCount())
-	// Questions that were pending when the daemon stopped have lost their askers'
-	// connections; give them the usual grace period to reconnect.
-	for _, it := range store.Items("") {
-		if it.Kind == "question" && it.State == StatePending {
-			srv.leaseAcquire(it.ID)
-			srv.leaseRelease(it.ID)
-		}
-	}
+	srv.resumeQuestions()
 
 	// Only the real install briefs agents; a test daemon on a fake root must not
 	// touch this machine's skills or projects.

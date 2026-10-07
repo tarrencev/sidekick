@@ -329,6 +329,7 @@ func (s *Server) agentMux() *http.ServeMux {
 	m.HandleFunc("GET /v1/items/{id}/wait", s.wait)
 	m.HandleFunc("POST /v1/items/{id}/cancel", s.cancel)
 	m.HandleFunc("POST /v1/items/{id}/release", s.release)
+	m.HandleFunc("POST /v1/items/{id}/reopen", s.reopen)
 	m.HandleFunc("POST /v1/review", s.requestReview)
 	m.HandleFunc("POST /v1/status", s.setStatus)
 	m.HandleFunc("POST /v1/whoami", s.whoami)
@@ -418,7 +419,21 @@ func (s *Server) wait(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-const leaseGrace = 20 * time.Second
+// leaseGrace is how long a blocking question survives without a waiting asker.
+var leaseGrace = 20 * time.Second
+
+// resumeQuestions runs at startup. Blocking questions that were pending when the
+// daemon stopped lost their askers' connections; they get the usual grace period
+// to reconnect. Async questions have no asker waiting by design and stay in the
+// inbox until the user answers.
+func (s *Server) resumeQuestions() {
+	for _, it := range s.store.Items("") {
+		if it.Kind == "question" && it.State == StatePending && !it.Async {
+			s.leaseAcquire(it.ID)
+			s.leaseRelease(it.ID)
+		}
+	}
+}
 
 func (s *Server) leaseAcquire(id string) {
 	s.mu.Lock()
@@ -439,6 +454,9 @@ func (s *Server) leaseRelease(id string) {
 			delete(s.leases, id)
 		}
 		s.mu.Unlock()
+		if it, ok := s.store.Get(id); !ok || it.Async {
+			return // async questions are never withdrawn for lack of a waiter
+		}
 		if live == 0 {
 			if _, err := s.store.Close(id, "question", StateCancelled, nil); err == nil {
 				log.Printf("question %s cancelled: asker went away", id)
@@ -469,6 +487,30 @@ func (s *Server) release(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 	writeJSONResponse(w, moved)
+}
+
+// reopen puts a wrongly closed question, review or proposal back in the user's
+// inbox (an operator repair; see the sidekick-dev skill).
+func (s *Server) reopen(w http.ResponseWriter, r *http.Request) {
+	it, err := s.store.Update(r.PathValue("id"), func(it *Item) error {
+		if it.Kind != "question" && it.Kind != "review" && it.Kind != "proposal" {
+			return ErrWrongKind
+		}
+		if it.State != StateCancelled {
+			return errors.New("only a cancelled item can be reopened")
+		}
+		it.State, it.Closed, it.Answers, it.Delivered = StatePending, time.Time{}, nil, false
+		if it.Kind == "question" {
+			it.Async = true // nobody can be waiting on it any more
+		}
+		return nil
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	}
+	s.notifyPush(it)
+	writeJSONResponse(w, it)
 }
 
 func (s *Server) cancel(w http.ResponseWriter, r *http.Request) {

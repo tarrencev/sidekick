@@ -114,7 +114,18 @@ the Swift changes, and tell the user it needs a rebuild from the Mac.
   force it.
 - Check usage: `ls -t ~/.sidekick/items | head` and `cat ~/.sidekick/status/*.json`.
 
+## Repairs
+
+- An inbox item closed by mistake (e.g. `cancelled`) can be put back:
+  `curl -s --unix-socket ~/.sidekick/agent.sock -XPOST http://sidekick/v1/items/<id>/reopen`
+  (re-sends the push). Questions come back async.
+- An agent stuck in an old blocking question: `POST /v1/items/<id>/release` moves the
+  question to an async one and tells the agent to carry on.
+
 ## Gotchas
+
+- Async questions (the default) have no waiting agent. Never cancel them for a lost
+  connection or a restart; only blocking `sidekick ask -wait` questions use leases.
 
 - `/usr/bin/herdr` is stale; always use `~/.local/bin/herdr` (`HERDR_BIN_PATH`).
 - A question lives only as long as its asker waits; an interrupted agent withdraws it.
