@@ -101,11 +101,20 @@ private struct FloatingComposer: ViewModifier {
         return slug.map { .project($0) }
     }
 
+    private func openIfRequested() {
+        guard let key = model.requestedConversation, let fixedTarget, fixedTarget.key == key else { return }
+        model.requestedConversation = nil
+        open = true
+    }
+
     func body(content: Content) -> some View {
         content
         #if DEBUG
         .onAppear { if UserDefaults.standard.bool(forKey: "debugComposerOpen") { open = true } }
         #endif
+        // Opened from the Inbox or a reply notification: show that conversation.
+        .onAppear(perform: openIfRequested)
+        .onChange(of: model.requestedConversation) { _, _ in openIfRequested() }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if !open {
                 HStack {

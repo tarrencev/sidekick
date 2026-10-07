@@ -216,7 +216,7 @@ func (s *Server) registerDevice(w http.ResponseWriter, r *http.Request) {
 func (s *Server) pendingCount() int {
 	n := 0
 	for _, it := range s.store.Items("") {
-		if it.State == StatePending && (it.Kind == "question" || it.Kind == "review" || it.Kind == "proposal") {
+		if (it.State == StatePending && (it.Kind == "question" || it.Kind == "review" || it.Kind == "proposal")) || unreadReply(it) {
 			n++
 		}
 	}

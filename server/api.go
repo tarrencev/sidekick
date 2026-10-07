@@ -54,6 +54,7 @@ func (s *Server) userMux() *http.ServeMux {
 	m.HandleFunc("GET /api/inbox", s.inbox)
 	m.HandleFunc("GET /api/messages", s.listMessages)
 	m.HandleFunc("POST /api/messages", s.postMessage)
+	m.HandleFunc("POST /api/messages/seen", s.markSeen)
 	m.HandleFunc("POST /api/devices", s.registerDevice)
 	m.HandleFunc("GET /api/projects/{slug}/threads/{tid}", s.getThread)
 	m.HandleFunc("POST /api/projects/{slug}/prompt", s.prompt)
@@ -66,7 +67,7 @@ func (s *Server) summary(pr Project) projectSummary {
 		sum.Status = &st
 	}
 	for _, it := range s.store.Items(pr.Slug) {
-		if it.State == StatePending && it.Kind != "message" {
+		if (it.State == StatePending && it.Kind != "message") || unreadReply(it) {
 			sum.Pending++
 		}
 	}
@@ -269,8 +270,8 @@ func (s *Server) inbox(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	for _, it := range s.store.Items("") {
-		if it.Kind == "message" || it.Kind == "notice" {
-			continue // conversations and agent reminders aren't for the inbox
+		if it.Kind == "notice" || (it.Kind == "message" && !unreadReply(it)) {
+			continue // reminders and read conversations aren't for the inbox; unread replies are
 		}
 		if name, ok := names[it.Project]; ok {
 			out = append(out, inboxItem{Item: it, ProjectName: name, ThreadTitle: titles[it.Project+"/"+it.Thread]})
@@ -330,6 +331,7 @@ func (s *Server) agentMux() *http.ServeMux {
 	m.HandleFunc("POST /v1/items/{id}/cancel", s.cancel)
 	m.HandleFunc("POST /v1/items/{id}/release", s.release)
 	m.HandleFunc("POST /v1/items/{id}/reopen", s.reopen)
+	m.HandleFunc("POST /v1/notice", s.postNotice)
 	m.HandleFunc("POST /v1/review", s.requestReview)
 	m.HandleFunc("POST /v1/status", s.setStatus)
 	m.HandleFunc("POST /v1/whoami", s.whoami)
@@ -511,6 +513,23 @@ func (s *Server) reopen(w http.ResponseWriter, r *http.Request) {
 	}
 	s.notifyPush(it)
 	writeJSONResponse(w, it)
+}
+
+// postNotice sends a coordinator a verified reminder from Sidekick (operator use).
+func (s *Server) postNotice(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Project string `json:"project"`
+		Text    string `json:"text"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Project == "" || strings.TrimSpace(body.Text) == "" {
+		http.Error(w, "project and text required", http.StatusBadRequest)
+		return
+	}
+	if err := s.notice(body.Project, strings.TrimSpace(body.Text)); err != nil {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (s *Server) cancel(w http.ResponseWriter, r *http.Request) {

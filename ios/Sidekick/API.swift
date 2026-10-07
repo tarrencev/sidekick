@@ -54,6 +54,10 @@ struct API {
         try await post("api/items/\(item.id)/review", body: ["verdict": verdict.rawValue, "comment": comment])
     }
 
+    func markSeen(_ target: ComposerTarget) async throws {
+        try await post("api/messages/seen", body: ["project": target.project, "thread": target.thread ?? ""])
+    }
+
     func messages(_ target: ComposerTarget) async throws -> [Item] {
         var query = [URLQueryItem(name: "project", value: target.project)]
         if let t = target.thread { query.append(URLQueryItem(name: "thread", value: t)) }

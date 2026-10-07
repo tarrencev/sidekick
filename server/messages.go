@@ -33,7 +33,8 @@ func (s *Server) sendMessage(project, thread, text string) (Item, error) {
 	if err := s.store.Add(it); err != nil {
 		return Item{}, err
 	}
-	prompt := fmt.Sprintf("%s The user wrote this from the Sidekick app on their phone. Answer in this pane as you normally would; your reply is relayed to them.\n\n%s",
+	prompt := fmt.Sprintf("%s The user wrote this from the Sidekick app on their phone. Answer in this pane as you normally would; your reply is relayed to them. "+
+		"If your answer proposes new work (a thread to start), don't just offer it in prose: file it with `sidekick propose` so it lands in their inbox to approve.\n\n%s",
 		messageMarker(it.ID), text)
 	if err := s.deliver.Prompt(project, thread, prompt); err != nil {
 		who := "The coordinator"
@@ -126,6 +127,30 @@ func (s *Server) replyMessage(w http.ResponseWriter, r *http.Request) {
 	s.notifyReply(it)
 	writeJSONResponse(w, it)
 }
+
+// markSeen records that the user has read a conversation's replies (it drops them
+// from the inbox on every device).
+func (s *Server) markSeen(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Project string `json:"project"`
+		Thread  string `json:"thread"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, "bad body", http.StatusBadRequest)
+		return
+	}
+	n := 0
+	for _, it := range s.messagesFor(body.Project, body.Thread) {
+		if it.State == StateReplied && !it.Seen {
+			s.store.Update(it.ID, func(it *Item) error { it.Seen = true; return nil })
+			n++
+		}
+	}
+	writeJSONResponse(w, map[string]int{"seen": n})
+}
+
+// unreadReply reports whether an item is an agent's reply the user hasn't read.
+func unreadReply(it Item) bool { return it.Kind == "message" && it.State == StateReplied && !it.Seen }
 
 // replyAge bounds how long after a message its reply is still looked for.
 const replyAge = 6 * time.Hour

@@ -53,8 +53,8 @@ struct MacRootView: View {
         // A clicked notification or menu bar item.
         .onChange(of: model.deepLink) { _, link in
             guard let link else { return }
-            let target: SidebarItem = link.isReply ? link.project.map { .project($0) } ?? .inbox : .inbox
-            let routes = link.isReply ? link.routes.filter { if case .thread = $0 { true } else { false } } : link.routes
+            let target: SidebarItem = .inbox
+            let routes = link.routes
             if selection == target {
                 path = routes
             } else {

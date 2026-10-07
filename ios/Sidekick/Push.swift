@@ -84,6 +84,8 @@ struct DeepLink: Equatable {
     var isReply: Bool { kind == "reply" }
 
     var routes: [Route] {
+        // A reply opens its conversation (via the message item's page).
+        if isReply, let item { return [.item(item)] }
         if isReply, let project {
             return [thread.map { .thread(project: project, id: $0) } ?? .project(project)]
         }

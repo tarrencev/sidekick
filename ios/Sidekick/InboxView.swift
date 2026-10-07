@@ -4,9 +4,9 @@ struct InboxView: View {
     @Environment(AppModel.self) private var model
     @State private var showResolved = false
 
-    private var pending: [InboxItem] { model.inbox.filter(\.item.isPending) }
+    private var pending: [InboxItem] { model.inbox.filter(\.item.needsYou) }
     private var resolved: [InboxItem] {
-        model.inbox.filter { !$0.item.isPending }
+        model.inbox.filter { !$0.item.needsYou }
             .sorted { ($0.item.closed ?? $0.item.created) > ($1.item.closed ?? $1.item.created) }
     }
 
@@ -83,7 +83,7 @@ private struct InboxRow: View {
             icon.padding(.top, 2)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(item.isPending ? item.kindLabel : item.outcome)
+                    Text(item.needsYou ? item.kindLabel : item.outcome)
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.secondary)
                         .lineLimit(1)
@@ -110,9 +110,10 @@ private struct InboxRow: View {
         let symbol = switch item.kind {
         case .question: "questionmark"
         case .proposal: "plus"
+        case .message: "bubble.left"
         default: "checkmark"
         }
-        if item.isPending {
+        if item.needsYou {
             Image(systemName: symbol)
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Theme.background)

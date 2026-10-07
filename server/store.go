@@ -40,6 +40,7 @@ type Item struct {
 	// message: the user wrote to an agent from the app; Reply is its answer.
 	Text  string `json:"text,omitempty"`
 	Reply string `json:"reply,omitempty"`
+	Seen  bool   `json:"seen,omitempty"` // the user has read the reply
 	Error string `json:"error,omitempty"`
 }
 

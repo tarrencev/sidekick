@@ -114,16 +114,11 @@ struct RootView: View {
             }
             .badge(model.totalPending)
         }
-        // A tapped notification: inbox items open in the Inbox, replies on their page.
         .onChange(of: model.deepLink) { _, link in
             guard let link else { return }
-            if link.isReply {
-                tab = 0
-                projectsPath = link.routes
-            } else {
-                tab = 1
-                inboxPath = link.routes
-            }
+            // Everything a notification can be about lives in the Inbox, replies included.
+            tab = 1
+            inboxPath = link.routes
             model.deepLink = nil
         }
         #if DEBUG
@@ -180,15 +175,19 @@ struct ItemView: View {
     }
 }
 
-/// Messages live in the composer; opening one shows where it was sent.
+/// A reply opens the page it belongs to with its conversation open.
 private struct ThreadOrProject: View {
+    @Environment(AppModel.self) private var model
     let item: Item
 
     var body: some View {
-        if let tid = item.thread {
-            ThreadView(slug: item.project, tid: tid)
-        } else {
-            ProjectView(slug: item.project)
+        Group {
+            if let tid = item.thread {
+                ThreadView(slug: item.project, tid: tid)
+            } else {
+                ProjectView(slug: item.project)
+            }
         }
+        .onAppear { model.requestedConversation = ComposerTarget(item).key }
     }
 }

@@ -37,11 +37,16 @@ final class AppModel {
 
     var api: API? { URL(string: server).map(API.init) }
 
-    var totalPending: Int { inbox.filter(\.item.isPending).count }
+    var totalPending: Int { inbox.filter(\.item.needsYou).count }
+
+    /// A conversation the user asked to open (from the Inbox or a notification); the
+    /// matching page's composer opens it.
+    var requestedConversation: String?
 
     /// The freshest copy of an item, wherever it was last loaded.
     func item(_ id: String) -> Item? {
         if let hit = inbox.first(where: { $0.id == id }) { return hit.item }
+        for list in messages.values { if let hit = list.first(where: { $0.id == id }) { return hit } }
         for d in details.values { if let hit = d.items.first(where: { $0.id == id }) { return hit } }
         return nil
     }
@@ -154,6 +159,13 @@ final class AppModel {
 
     func markRead(_ target: ComposerTarget) {
         unreadReplies.remove(target.key)
+        // Read on one device, read everywhere: drops the replies from the Inbox.
+        let unread = inbox.contains { $0.item.isUnreadReply && ComposerTarget($0.item) == target }
+        guard unread, let api else { return }
+        Task {
+            try? await api.markSeen(target)
+            await refreshInbox()
+        }
     }
 
     private func notifyReply(_ item: Item, target: ComposerTarget) {

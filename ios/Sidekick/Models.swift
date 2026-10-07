@@ -157,10 +157,17 @@ struct Item: Codable, Identifiable, Hashable {
     let text: String?
     let reply: String?
     let error: String?
+    let seen: Bool?
 
     enum Kind: String, Codable { case question, review, message, proposal }
 
     var isPending: Bool { state == "pending" }
+
+    /// An agent's reply the user hasn't read yet.
+    var isUnreadReply: Bool { kind == .message && state == "replied" && seen != true }
+
+    /// Whether this belongs in the Inbox's pending list.
+    var needsYou: Bool { isPending || isUnreadReply }
 }
 
 /// An item with the names needed to show it outside its project.
@@ -191,7 +198,11 @@ struct InboxItem: Codable, Identifiable, Hashable {
 extension Item {
     /// The one-line description used in lists.
     var headline: String {
-        kind == .question ? (questions?.first?.question ?? "Question") : (title ?? "Artifact")
+        switch kind {
+        case .question: questions?.first?.question ?? "Question"
+        case .message: (reply ?? text ?? "Reply").split(separator: "\n").first.map(String.init) ?? "Reply"
+        default: title ?? "Artifact"
+        }
     }
 
     var kindLabel: String {
@@ -199,7 +210,7 @@ extension Item {
         case .question: "Question"
         case .review: "Approval"
         case .proposal: "Proposed thread"
-        case .message: "Message"
+        case .message: "Reply"
         }
     }
 
