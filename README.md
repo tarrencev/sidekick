@@ -1,102 +1,128 @@
 # Sidekick
 
-A phone app for the [herdr-projects](https://github.com/eliasstravik/herdr-projects)
-projects running on `dl`. Agents reach you in exactly two ways, and each project has
-one status line:
+**Your coding agents, in your pocket.** Sidekick is an iPhone and Mac app for people who
+run fleets of AI coding agents with [herdr-projects](https://github.com/eliasstravik/herdr-projects).
+Agents keep working on your machine; when they need you, it lands on your phone: a
+question to answer, something to review, a new piece of work to approve. You answer in
+a tap, a swipe, or by voice, and the agent carries on.
 
-- **Questions**: Claude Code's `AskUserQuestion` (or `sidekick ask`) is relayed to the
-  app. Your answer goes back as the tool result.
-- **Reviews**: `sidekick review <path>` snapshots a file or static site and serves it
-  on the tailnet. Your approval or requested changes are sent back to the agent's pane.
-- **Status**: the coordinator keeps a headline (`sidekick status`), shown next to the
-  project's threads, which come from herdr-projects.
+![Sidekick on iPhone: a project's plan, the inbox, a review, and a conversation with the coordinator](docs/screenshots/hero.png)
+
+## Why
+
+Agents are good at working for hours; they're bad at getting your attention. Today they
+ask in a terminal you aren't looking at, leave decisions buried in long reports, or stop
+and wait. Sidekick gives them **exactly two ways to reach you**, and makes both feel
+native:
+
+- **Questions.** An agent's normal question tool (Claude Code's `AskUserQuestion`) goes
+  to your inbox as a multiple-choice card. Questions are asynchronous: the agent keeps
+  working on everything else and picks up your answer when it arrives.
+- **Reviews.** Anything worth looking at (a redesign, a report, before/after
+  screenshots) arrives as a self-explaining page: what this is, what changed, what the
+  agent needs from you. Approve, refine (type or talk), or reject.
+
+Everything else (status, plans, PRs, replies) is there to give you context, not to
+interrupt you.
+
+## What you get
+
+| | |
+|---|---|
+| <img src="docs/screenshots/projects.png" alt="Projects" width="240"> | **Every project at a glance.** Each coordinator keeps a one-line headline and a short plain-English summary of where things stand. |
+| <img src="docs/screenshots/project.png" alt="Project plan" width="240"> | **A real plan, not a log.** Focus, priorities with their stage (research → planning → building → review → merging), the order PRs should merge in, and what's next. PR links are tinted by state and CI. Work waiting on you links straight to the question. |
+| <img src="docs/screenshots/inbox.png" alt="Inbox" width="240"> | **One inbox.** Questions, reviews, proposed threads and unread replies, across every project. Swipe right to approve, left to reject. Push notifications on iPhone and Mac. |
+| <img src="docs/screenshots/question.png" alt="Question" width="240"> | **Decisions, framed.** The agent explains the trade-off and puts its recommendation first. Links in questions open in the browser. |
+| <img src="docs/screenshots/review.png" alt="Review" width="240"> | **Reviews you understand cold.** Agents must publish one HTML page that explains itself and embeds its images; Sidekick refuses folders of files or bare screenshots. |
+| <img src="docs/screenshots/chat.png" alt="Chat" width="240"> | **Talk to any agent.** Message a project's coordinator or any thread from wherever you are; the reply comes back to the app. Hold the + to dictate. |
+| <img src="docs/screenshots/thread.png" alt="Thread" width="240"> | **Drop into a thread.** Its summary, PR, artifacts, files it produced and its full report. |
+
+**Voice, on device.** Hold the + (or any mic) to talk. Speech is transcribed locally with
+NVIDIA's Parakeet TDT 0.6B through [FluidAudio](https://github.com/FluidInference/FluidAudio)
+on the Neural Engine. Audio never leaves your device.
+
+**Proactive coordinators.** Coordinators propose new threads for your approval instead
+of waiting to be asked, and keep their plan current. If a plan says work is blocked on
+you but nothing is in your inbox, Sidekick reminds the coordinator to ask.
+
+**Mac app.** The same app on the Mac: projects and inbox in a sidebar, a menu bar item
+with what's waiting, a Dock badge, Return to send.
+
+## How it works
 
 ```
- Claude/Codex pane ──hook / CLI──▶ sidekickd (dl) ◀──https (tailnet)── iOS app
-   (herdr-projects)  unix socket   ~/.sidekick        :7443 API, :7444 artifacts
-         ▲                              │
-         └── herdr-projects prompt ◀────┘  review verdicts
+  agent panes (herdr)                     your agent host                        you
+ ┌──────────────────────┐   hooks / CLI   ┌───────────────────────┐   tailnet   ┌──────────────┐
+ │ coordinator, threads │ ──────────────▶ │ sidekick daemon       │ ◀─────────▶ │ iPhone / Mac │
+ │ (Claude Code, Codex) │                 │ items, artifacts, PRs │    HTTPS    │ app + push   │
+ └──────────────────────┘ ◀────────────── └───────────────────────┘             └──────────────┘
+         answers, decisions and messages typed back into the agent's pane (verified)
 ```
 
-## Layout
+- **One Go binary** (`server/`) is the daemon, the CLI agents call, and its own
+  installer. It reads herdr-projects' state read-only, serves the app API and artifacts
+  over Tailscale, and sends native push through APNs.
+- **Claude Code hooks** relay `AskUserQuestion` to the app (and return immediately),
+  capture an agent's reply to your messages when its turn ends, and vouch for prompts
+  Sidekick types into a pane so agents trust them. Codex and other agents use the CLI.
+- **Skills teach the agents.** A `sidekick` skill tells them how to ask, publish reviews,
+  keep summaries and plans current, and propose work. `sidekick doctor --fix` installs
+  and repairs everything (skills, hooks, the systemd service, Tailscale serve) from
+  copies embedded in the binary, and new projects are onboarded automatically.
 
-- `server/`: `sidekick`, a single Go binary that is the daemon (`serve`), the agent CLI
-  (`ask`, `review`, `status`, `whoami`, `hook claude-ask`) and the installer (`doctor`).
-- `server/assets/`: the agent skills (`sidekick` to use it, `sidekick-dev` to maintain
-  it), the `PROJECT.md` instruction block and the systemd unit. These are embedded in
-  the binary, so `sidekick doctor --fix` can restore everything from the binary alone.
-- `ios/`: the SwiftUI app (iOS 18). The project is generated with XcodeGen.
-- `deploy/`: `install.sh` (from the Mac) and `deploy-local.sh` (on dl).
-
-## How it maps onto herdr-projects
-
-- **Projects:** `~/.herdr-projects/<slug>` (read-only). Archived projects are hidden.
-- **Attribution:** the CLI sends `HERDR_SESSION` and `HERDR_PANE_ID`. The daemon matches
-  them to the coordinator (`.state/coordinator.json`) or a thread (`threads/*.toml`).
-- **Summaries:** `sidekick status` from the coordinator sets the project's summary; from
-  a thread, that thread's. Threads without one show the opening of their report.
-- **Questions** live only as long as the asking agent waits. If you interrupt the agent,
-  or the hook times out, the question is withdrawn and Claude falls back to its
-  terminal prompt.
-- **Verdicts and messages from the app** go back with `herdr-projects coordinator|thread
-  prompt`, so its draft protection applies.
-- **Onboarding:** the daemon keeps the skills installed for Claude and Codex and keeps a
-  `## Sidekick` block in every project's `PROJECT.md`, so new projects and threads learn
-  the rules on their own.
-
-## Deploy
-
-Push to `main`, then from the Mac (dl pulls from GitHub, then builds and deploys):
+### The agent's side
 
 ```bash
-deploy/install.sh
-SIDEKICK_NOTIFY_URL=https://ntfy.sh/<secret-topic> deploy/install.sh   # optional push alerts
+sidekick review ./page -title "One-page checkout" -summary "Approve if the section order works on a phone"
+sidekick status "Checkout ships this week" -summary "…3–4 plain sentences…" -link <PR>
+sidekick plan < plan.json                       # focus, priorities and stages, merge order, next
+sidekick propose "Order tracking emails" -why "Support gets 40 'where is my order' emails a day"
+sidekick template ./page                        # a plain-English starter page for reviews
 ```
 
-On dl, agents with the `sidekick-dev` skill can work in `~/code/me/sidekick` and run
-`deploy/deploy-local.sh`. Check the install with `sidekick doctor`, and repair it with
-`sidekick doctor --fix`.
+## Try it
 
-## Push notifications
+You need Go and, for the apps, Xcode with an Apple developer account.
 
-dl sends native push through APNs for new questions, reviews and proposals, and for
-replies to your messages; tapping one opens the item. It needs an APNs auth key from the
-Apple developer account, configured in `dl:~/.config/sidekick/env`:
+```bash
+demo/run.sh                      # a fictional demo project on a local daemon (127.0.0.1:17600)
+ios/install-device.sh <TEAM_ID>  # build and install the iPhone app on a connected device
+ios/install-mac.sh <TEAM_ID>     # build and install the Mac app
+```
+
+Point the app's server setting (long-press the title) at your daemon. The screenshots
+above come from `demo/run.sh` in the iOS Simulator.
+
+## Running it for real
+
+On the machine where your agents run (with herdr-projects and Tailscale):
+
+```bash
+deploy/install.sh <ssh-host>     # pulls main on the host, builds, installs and runs `sidekick doctor --fix`
+```
+
+For push, create an APNs auth key in your Apple developer account and add it to
+`~/.config/sidekick/env` on the host:
 
 ```
-SIDEKICK_APNS_KEY=/home/<you>/.config/sidekick/apns.p8   # chmod 600
-SIDEKICK_APNS_KEY_ID=<10-char key id>
+SIDEKICK_APNS_KEY=/home/<you>/.config/sidekick/apns.p8   # chmod 600, never commit it
+SIDEKICK_APNS_KEY_ID=<10-character key id>
 SIDEKICK_APNS_TEAM_ID=<team id>
 ```
 
-The app registers its device token with dl on launch (`POST /api/devices`).
+The bundle ids (`gg.cartridge.sidekick`, `gg.cartridge.sidekick.mac`) and the default
+server address live in `ios/project.yml` and `ios/Sidekick/AppModel.swift`; change them
+for your own setup.
 
-## Voice input
+## Repository
 
-Every text box in the app has a mic button. Speech is transcribed on the phone with the
-same engine as the Mac's local dictation: NVIDIA Parakeet TDT 0.6B v2 through
-[FluidAudio](https://github.com/FluidInference/FluidAudio) 0.17.2 on the Neural Engine
-(`ios/Sidekick/Dictation.swift`), with the same word replacements. Audio never leaves
-the phone. The model (~450 MB) downloads the first time you tap the mic.
+| Path | What |
+|---|---|
+| `server/` | The Go daemon and CLI (`go test ./...`). |
+| `server/assets/` | Agent skills, project instructions, the review template and systemd unit, embedded in the binary. |
+| `ios/` | The SwiftUI app for iPhone and Mac (XcodeGen), plus UI tests (`ios/run-ui-tests.sh`). |
+| `deploy/` | Deploy scripts for the agent host. |
+| `demo/` | The screenshot demo. |
 
-## Mac app
-
-The same SwiftUI code builds a native Mac app (`SidekickMac` target, bundle id
-`gg.cartridge.sidekick.mac`): Inbox and projects in a sidebar, the floating composer with
-hold-to-talk, a menu bar item with the pending count and what's waiting, a Dock badge,
-and native push. Closing the window keeps it in the menu bar.
-
-```bash
-ios/install-mac.sh <TEAM_ID>    # builds, signs and installs /Applications/Sidekick.app
-```
-
-## Build the app
-
-The app needs Xcode, so it builds only on the Mac:
-
-```bash
-ios/install-device.sh <TEAM_ID>    # builds, signs, installs and launches on a connected iPhone
-```
-
-The script clears the `SDKROOT`, `CPATH` and `DEVELOPER_DIR` values that this shell
-points at the command-line tools; otherwise iOS builds fail.
+Agents working on Sidekick itself should load the `sidekick-dev` skill: it covers the
+layout, APIs, tests, deployment and repairs.

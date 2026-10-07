@@ -265,7 +265,12 @@ private struct ComposerPanel: View {
             await model.refreshMessages(target)
         }
         .onDisappear { model.openConversation = nil }
-        .onAppear { if text.isEmpty { focused = true } }
+        .onAppear {
+            #if DEBUG
+            if UserDefaults.standard.bool(forKey: "debugNoFocus") { return } // screenshots: no keyboard
+            #endif
+            if text.isEmpty { focused = true }
+        }
     }
 
     private var hint: String {

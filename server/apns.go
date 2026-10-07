@@ -80,7 +80,7 @@ func NewAPNs(keyPath, keyID, teamID, topic, dataDir string) (*APNs, error) {
 func (a *APNs) Enabled() bool { return a.key != nil }
 
 func (a *APNs) Register(token, env, topic string) error {
-	if len(token) < 32 || strings.Trim(token, "0123456789abcdef") != "" {
+	if len(token) < 32 || strings.Trim(token, "0123456789abcdef") != "" { // gitleaks:allow (hex digits, not a key)
 		return errors.New("bad device token")
 	}
 	if env != "production" {

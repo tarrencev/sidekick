@@ -124,7 +124,16 @@ struct RootView: View {
         #if DEBUG
         // e.g. `-debugRoute project:demo,item:<id>` opens straight to a screen.
         .onAppear {
-            let spec = UserDefaults.standard.string(forKey: "debugRoute") ?? ""
+            var spec = UserDefaults.standard.string(forKey: "debugRoute") ?? ""
+            if spec.hasPrefix("inbox") { // `inbox[,item:<id>]` opens the Inbox tab
+                tab = 1
+                spec = String(spec.dropFirst(5)).trimmingCharacters(in: CharacterSet(charactersIn: ","))
+                inboxPath = spec.split(separator: ",").compactMap { part in
+                    let kv = part.split(separator: ":", maxSplits: 1).map(String.init)
+                    return kv.count == 2 && kv[0] == "item" ? .item(kv[1]) : nil
+                }
+                return
+            }
             projectsPath = spec.split(separator: ",").compactMap { part in
                 let kv = part.split(separator: ":", maxSplits: 1).map(String.init)
                 guard kv.count == 2 else { return nil }
