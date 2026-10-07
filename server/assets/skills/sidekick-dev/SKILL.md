@@ -38,7 +38,7 @@ Keep it to those primitives. New features should make them better, not add chann
 
 | What | Where |
 |---|---|
-| Source (Go daemon + CLI, iOS app, deploy scripts) | `~/code/me/sidekick` (`server/`, `ios/`, `deploy/`) |
+| Source (Go daemon + CLI, iOS/Mac app, deploy scripts) | `~/code/me/sidekick`, a git checkout of `git@github.com:tarrencev/sidekick.git` (`server/`, `ios/`, `deploy/`) |
 | Binary | `~/.local/bin/sidekick` (daemon and CLI are the same binary) |
 | Service | `systemctl --user {status,restart} sidekick`; logs: `journalctl --user -u sidekick` |
 | Config | `~/.config/sidekick/env` (`SIDEKICK_ARTIFACT_URL`, `SIDEKICK_NOTIFY_URL`, `SIDEKICK_APNS_KEY`/`_KEY_ID`/`_TEAM_ID`) |
@@ -75,7 +75,9 @@ projects get onboarded on their own.
    For an end-to-end check, run a second daemon on a fake root, which never touches the
    real install: `sidekick serve -projects-root /tmp/hp -data /tmp/skd -listen 127.0.0.1:17600 -artifacts-listen 127.0.0.1:17601 -artifact-url http://127.0.0.1:17601 -socket /tmp/sk.sock -herdr-projects /bin/true`,
    with `SIDEKICK_SOCKET=/tmp/sk.sock` for CLI calls.
-3. Deploy on this machine: `~/code/me/sidekick/deploy/deploy-local.sh`. It builds,
+3. Commit on a branch and push it (`git push -u origin <branch>`); open a PR for the
+   user unless they asked you to land it on main. Deploy on this machine with
+   `~/code/me/sidekick/deploy/deploy-local.sh`. It builds,
    swaps the binary, runs `doctor --fix` and restarts the service. Open questions survive
    a restart: their askers reconnect within the 20s grace period.
 4. Verify against live data: `curl -s localhost:7600/api/projects | jq` and

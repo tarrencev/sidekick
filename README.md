@@ -46,7 +46,7 @@ one status line:
 
 ## Deploy
 
-From the Mac (syncs the source to `dl:~/code/me/sidekick`, then builds and deploys there):
+Push to `main`, then from the Mac (dl pulls from GitHub, then builds and deploys):
 
 ```bash
 deploy/install.sh
