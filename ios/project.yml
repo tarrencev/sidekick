@@ -1,0 +1,77 @@
+name: Sidekick
+options:
+  bundleIdPrefix: gg.cartridge
+  deploymentTarget:
+    iOS: "18.0"
+    macOS: "15.0"
+packages:
+  FluidAudio:
+    url: https://github.com/FluidInference/FluidAudio.git
+    exactVersion: 0.17.2
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: "" # set your team id, or pick one in Xcode's Signing tab
+targets:
+  Sidekick:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sidekick
+        excludes: ["SidekickMac.entitlements"]
+    dependencies:
+      - package: FluidAudio
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: gg.cartridge.sidekick
+        CODE_SIGN_ENTITLEMENTS: Sidekick/Sidekick.entitlements
+        TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Sidekick
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UIBackgroundModes: remote-notification
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: Sidekick transcribes your voice on this iPhone so you can answer and give feedback by speaking. Audio never leaves the device.
+  SidekickMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sidekick
+        excludes: ["Sidekick.entitlements"]
+    dependencies:
+      - package: FluidAudio
+    settings:
+      base:
+        PRODUCT_NAME: Sidekick
+        PRODUCT_BUNDLE_IDENTIFIER: gg.cartridge.sidekick.mac
+        CODE_SIGN_ENTITLEMENTS: Sidekick/SidekickMac.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Sidekick
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.developer-tools
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: Sidekick transcribes your voice on this Mac so you can answer and give feedback by speaking. Audio never leaves the device.
+  SidekickUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources: [SidekickUITests]
+    dependencies:
+      - target: Sidekick
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Sidekick:
+    build:
+      targets:
+        Sidekick: all
+        SidekickUITests: [test]
+    test:
+      targets: [SidekickUITests]
+  SidekickMac:
+    build:
+      targets:
+        SidekickMac: all

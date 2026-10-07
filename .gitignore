@@ -1,0 +1,11 @@
+# Build output
+.build/
+server/sidekick
+ios/Sidekick.xcodeproj/
+*.xcresult
+
+# Secrets never belong here (the APNs key lives on dl in ~/.config/sidekick)
+*.p8
+.env
+
+.DS_Store

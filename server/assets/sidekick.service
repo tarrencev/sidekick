@@ -1,0 +1,12 @@
+[Unit]
+Description=Sidekick relay for herdr-projects (questions, reviews, status)
+After=network-online.target
+
+[Service]
+EnvironmentFile=-%h/.config/sidekick/env
+ExecStart=%h/.local/bin/sidekick serve -artifact-url ${SIDEKICK_ARTIFACT_URL} -notify-url ${SIDEKICK_NOTIFY_URL}
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
