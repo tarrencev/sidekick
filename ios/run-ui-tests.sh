@@ -12,7 +12,10 @@ sim=${SIM:-$(xcrun simctl list devices available -j | python3 -c 'import json,sy
 xcrun simctl boot "$sim" 2>/dev/null
 xcrun simctl privacy "$sim" grant microphone gg.cartridge.sidekick 2>/dev/null
 clip=${SK_DICTATION_AUDIO:-$out/dictation.wav}
-[ -f "$clip" ] || say -o "$clip" --data-format=LEI16@16000 "Please summarize what the smoke test thread has done so far."
+# (Re)make the clip if it's missing or truncated (a good one is ~100 KB).
+if [ ! -f "$clip" ] || [ "$(wc -c < "$clip")" -lt 20000 ]; then
+  say -o "$clip" --data-format=LEI16@16000 "Please summarize what the smoke test thread has done so far."
+fi
 xcodegen -q
 only=()
 for t in "$@"; do only+=("-only-testing:SidekickUITests/SidekickFlows/$t"); done

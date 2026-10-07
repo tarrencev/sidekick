@@ -73,6 +73,10 @@ final class SidekickFlows: XCTestCase {
         shot("after-send")
         let bubbles = app.staticTexts.matching(NSPredicate(format: "label == %@", text))
         XCTAssertEqual(bubbles.count, 1, "the message shows exactly once")
+        XCTAssertFalse(app.tabBars.firstMatch.isHittable, "the chat is full screen: no tab bar")
+        app.buttons["Close"].tap()
+        sleep(1)
+        XCTAssertTrue(app.tabBars.firstMatch.isHittable, "closing the chat brings the tab bar back")
     }
 
     func testComposerHoldToTalk() {

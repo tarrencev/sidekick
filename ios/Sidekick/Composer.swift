@@ -107,42 +107,49 @@ private struct FloatingComposer: ViewModifier {
         .onAppear { if UserDefaults.standard.bool(forKey: "debugComposerOpen") { open = true } }
         #endif
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            Group {
-                if open, let target {
-                    ComposerPanel(
-                        target: target,
-                        canPickProject: fixedTarget == nil,
-                        text: $text,
-                        pick: { slug in pickedProject = slug; model.lastProject = slug },
-                        close: { withAnimation(.snappy(duration: 0.25)) { open = false } }
-                    )
-                    .transition(.asymmetric(insertion: .scale(scale: 0.2, anchor: .bottomTrailing).combined(with: .opacity),
-                                            removal: .opacity))
-                } else {
-                    HStack {
-                        Spacer()
-                        HoldToTalkCircle(
-                            onTap: { withAnimation(.snappy(duration: 0.3)) { open = true } },
-                            onTranscript: { spoken in
-                                if !spoken.isEmpty { text = text.isEmpty ? spoken : text + " " + spoken }
-                                withAnimation(.snappy(duration: 0.3)) { open = true }
-                            }
-                        ) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 22, weight: .semibold))
-                                .foregroundStyle(Theme.background)
+            if !open {
+                HStack {
+                    Spacer()
+                    HoldToTalkCircle(
+                        onTap: { withAnimation(.snappy(duration: 0.3)) { open = true } },
+                        onTranscript: { spoken in
+                            if !spoken.isEmpty { text = text.isEmpty ? spoken : text + " " + spoken }
+                            withAnimation(.snappy(duration: 0.3)) { open = true }
                         }
-                        .overlay(alignment: .topTrailing) {
-                            if let target, model.unreadReplies.contains(target.key) {
-                                Circle().fill(Theme.text).frame(width: 12, height: 12)
-                                    .overlay(Circle().strokeBorder(Theme.background, lineWidth: 2))
-                            }
+                    ) {
+                        Image(systemName: "plus")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(Theme.background)
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        if let target, model.unreadReplies.contains(target.key) {
+                            Circle().fill(Theme.text).frame(width: 12, height: 12)
+                                .overlay(Circle().strokeBorder(Theme.background, lineWidth: 2))
                         }
                     }
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 12)
-                    .overlay(alignment: .bottomLeading) { DictationNote().padding(.leading, 20).padding(.bottom, 30) }
                 }
+                .padding(.trailing, 20)
+                .padding(.bottom, 12)
+                .overlay(alignment: .bottomLeading) { DictationNote().padding(.leading, 20).padding(.bottom, 30) }
+            }
+        }
+        #if os(iOS)
+        // Full screen means no tab bar under the input. .automatic leaves screens that
+        // already hide it (questions, reviews, threads) as they are once the chat closes.
+        .toolbar(open ? .hidden : .automatic, for: .tabBar)
+        #endif
+        // The chat takes the whole content area: room for long replies.
+        .overlay {
+            if open, let target {
+                ComposerPanel(
+                    target: target,
+                    canPickProject: fixedTarget == nil,
+                    text: $text,
+                    pick: { slug in pickedProject = slug; model.lastProject = slug },
+                    close: { withAnimation(.snappy(duration: 0.25)) { open = false } }
+                )
+                .transition(.asymmetric(insertion: .scale(scale: 0.96, anchor: .bottomTrailing).combined(with: .opacity),
+                                        removal: .opacity))
             }
         }
     }
@@ -167,60 +174,80 @@ private struct ComposerPanel: View {
     var body: some View {
         VStack(spacing: 0) {
             header
-            if !conversation.isEmpty {
-                Hairline()
+            Hairline()
+            if conversation.isEmpty {
+                VStack(spacing: 10) {
+                    Text("Write to \(recipient)")
+                        .font(Theme.serif(22))
+                        .foregroundStyle(Theme.text)
+                    Text(hint)
+                        .font(.system(size: 13))
+                        .foregroundStyle(Theme.tertiary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(24)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
                 ScrollViewReader { proxy in
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 14) {
+                        LazyVStack(alignment: .leading, spacing: 22) {
                             ForEach(conversation) { MessageExchange(item: $0).id($0.id) }
                         }
-                        .padding(14)
-                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { contentHeight = $0 }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 20)
+                        .frame(maxWidth: 760)
+                        .frame(maxWidth: .infinity)
                     }
-                    .scrollBounceBehavior(.basedOnSize)
-                    .frame(height: min(max(contentHeight, 1), 320))
                     .defaultScrollAnchor(.bottom)
                     .onChange(of: conversation.last?.state) { _, _ in
+                        if let last = conversation.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
+                    }
+                    .onChange(of: conversation.count) { _, _ in
                         if let last = conversation.last { withAnimation { proxy.scrollTo(last.id, anchor: .bottom) } }
                     }
                 }
             }
             Hairline()
-            if let error {
-                Text(error).font(.system(size: 12)).foregroundStyle(Theme.accent)
-                    .padding(.horizontal, 14).padding(.top, 8)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            HStack(alignment: .bottom, spacing: 8) {
-                TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Theme.tertiary), axis: .vertical)
-                    .lineLimit(1...6)
-                    .font(.system(size: 15))
-                    .foregroundStyle(Theme.text)
-                    .tint(Theme.accent)
-                    .focused($focused)
-                    .padding(.vertical, 8)
-                MicButton(text: $text)
-                Button(action: send) {
-                    Image(systemName: sending ? "ellipsis" : "arrow.up")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Theme.background)
-                        .frame(width: 32, height: 32)
-                        .background(Theme.accent.opacity(canSend ? 1 : 0.35), in: Circle())
+            VStack(alignment: .leading, spacing: 6) {
+                if let error {
+                    Text(error).font(.system(size: 12)).foregroundStyle(Theme.accent)
                 }
-                .disabled(!canSend)
-                .accessibilityLabel("Send")
+                HStack(alignment: .bottom, spacing: 8) {
+                    TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Theme.tertiary), axis: .vertical)
+                        .lineLimit(1...10)
+                        .font(.system(size: 15))
+                        .foregroundStyle(Theme.text)
+                        .tint(Theme.accent)
+                        .textFieldStyle(.plain)
+                        .focused($focused)
+                        .padding(.vertical, 9)
+                        .sendsOnReturn($text) { if canSend { send() } }
+                    MicButton(text: $text)
+                    Button(action: send) {
+                        Image(systemName: sending ? "ellipsis" : "arrow.up")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Theme.background)
+                            .frame(width: 32, height: 32)
+                            .background(Theme.accent.opacity(canSend ? 1 : 0.35), in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canSend)
+                    .accessibilityLabel("Send")
+                }
+                .padding(.leading, 16)
+                .padding(.trailing, 8)
+                .padding(.vertical, 6)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Theme.line))
+                DictationNote()
             }
-            .padding(.leading, 14)
-            .padding(.trailing, 8)
-            .padding(.vertical, 8)
-            DictationNote().padding(.horizontal, 14).padding(.bottom, 6)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: 760)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
         }
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Theme.line))
-        .shadow(color: .black.opacity(0.4), radius: 18, y: 6)
-        .padding(.horizontal, 12)
-        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.background.ignoresSafeArea())
         .task(id: target) {
             model.openConversation = target.key
             model.markRead(target)
@@ -228,6 +255,14 @@ private struct ComposerPanel: View {
         }
         .onDisappear { model.openConversation = nil }
         .onAppear { if text.isEmpty { focused = true } }
+    }
+
+    private var hint: String {
+        #if os(macOS)
+        "Return sends, Shift-Return adds a line. Hold the mic to talk. Replies appear here."
+        #else
+        "Replies appear here. Hold the mic or the + to talk."
+        #endif
     }
 
     private var header: some View {
@@ -249,13 +284,16 @@ private struct ComposerPanel: View {
             }
             Spacer()
             Button(action: close) {
-                Image(systemName: "xmark").font(.system(size: 13, weight: .semibold)).foregroundStyle(Theme.secondary)
-                    .frame(width: 28, height: 28)
+                Image(systemName: "xmark").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.secondary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.cancelAction) // Esc on the Mac
             .accessibilityLabel("Close")
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     private var recipient: String {

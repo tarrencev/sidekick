@@ -137,6 +137,8 @@ struct ApprovalView: View {
                             .tint(Theme.accent)
                             .focused($feedbackFocused)
                             .padding(.vertical, 8)
+                            .textFieldStyle(.plain)
+                            .sendsOnReturn($feedback) { if hasFeedback && !sending { send(.changes) } }
                         MicButton(text: $feedback)
                         Button { send(.changes) } label: {
                             Image(systemName: "arrow.up")

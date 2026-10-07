@@ -20,6 +20,23 @@ extension View {
         #endif
     }
 
+    /// On the Mac, Return sends and Shift-Return starts a new line (as in Messages and
+    /// Slack). iOS keeps the keyboard's own Return key and the send button.
+    @ViewBuilder func sendsOnReturn(_ text: Binding<String>, send: @escaping () -> Void) -> some View {
+        #if os(macOS)
+        onKeyPress(keys: [.return], phases: .down) { press in
+            if press.modifiers.contains(.shift) || press.modifiers.contains(.option) {
+                text.wrappedValue += "\n"
+                return .handled
+            }
+            send()
+            return .handled
+        }
+        #else
+        self
+        #endif
+    }
+
     /// Root screens draw their own large serif title on iPhone. On the Mac the window
     /// toolbar stays, for the sidebar toggle.
     @ViewBuilder func hidesNavigationBar() -> some View {
