@@ -79,6 +79,24 @@ final class SidekickFlows: XCTestCase {
         XCTAssertTrue(app.tabBars.firstMatch.isHittable, "closing the chat brings the tab bar back")
     }
 
+    /// An unread reply sits in the Inbox; opening it shows the conversation and marks it read.
+    func testReplyInInbox() {
+        app.tabBars.buttons["Inbox"].tap()
+        let reply = app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'inbox reply ok'")).firstMatch
+        XCTAssertTrue(reply.waitForExistence(timeout: 20), "unread reply is in the inbox")
+        shot("reply-in-inbox")
+        reply.tap()
+        let field = app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10), "the conversation opens, ready to answer")
+        sleep(2)
+        shot("reply-opened")
+        app.buttons["Close"].tap()
+        app.navigationBars.buttons.firstMatch.tap()
+        sleep(3)
+        shot("reply-read")
+        XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'inbox reply ok'")).firstMatch.exists, "read replies leave Pending")
+    }
+
     func testComposerHoldToTalk() {
         openProject("Trial")
         let plus = app.descendants(matching: .any)["Compose"]

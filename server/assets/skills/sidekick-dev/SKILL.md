@@ -119,6 +119,9 @@ the Swift changes, and tell the user it needs a rebuild from the Mac.
 - An inbox item closed by mistake (e.g. `cancelled`) can be put back:
   `curl -s --unix-socket ~/.sidekick/agent.sock -XPOST http://sidekick/v1/items/<id>/reopen`
   (re-sends the push). Questions come back async.
+- A coordinator that needs a nudge (e.g. it offered work in prose instead of
+  `sidekick propose`): `POST /v1/notice {"project":"…","text":"…"}` types a verified
+  `[sidekick notice:…]` reminder into its pane.
 - An agent stuck in an old blocking question: `POST /v1/items/<id>/release` moves the
   question to an async one and tells the agent to carry on.
 
