@@ -113,6 +113,45 @@ final class SidekickFlows: XCTestCase {
         app.activate()
     }
 
+    /// Swipe right approves, swipe left rejects (after confirming), and a question's
+    /// swipe right picks its first option. Tapping a row still opens it.
+    func testInboxSwipes() {
+        app.tabBars.buttons["Inbox"].tap()
+        func row(_ text: String) -> XCUIElement {
+            app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", text)).firstMatch
+        }
+        XCTAssertTrue(row("[test] Swipe A").waitForExistence(timeout: 20))
+        shot("swipe-inbox")
+
+        row("[test] Swipe A").swipeRight()
+        sleep(1)
+        shot("swipe-right-revealed")
+        if app.buttons["Approve"].exists { app.buttons["Approve"].tap() }
+        XCTAssertTrue(row("[test] Swipe A").waitForNonExistence(timeout: 10), "approved item leaves Pending")
+
+        row("[test] Swipe B").swipeLeft()
+        app.buttons["Reject"].firstMatch.tap()
+        sleep(1)
+        shot("swipe-reject-confirm")
+        let reject = app.buttons.matching(identifier: "Reject")
+        reject.element(boundBy: reject.count - 1).tap()
+        XCTAssertTrue(row("[test] Swipe B").waitForNonExistence(timeout: 10), "rejected item leaves Pending")
+
+        row("[test] Swipe question").swipeRight()
+        if app.buttons["Teal (Recommended)"].exists { app.buttons["Teal (Recommended)"].tap() }
+        XCTAssertTrue(row("[test] Swipe question").waitForNonExistence(timeout: 10), "answered question leaves Pending")
+        shot("swipe-done")
+
+        // Rows still open on tap.
+        let first = app.cells.element(boundBy: 1)
+        if first.exists {
+            first.tap()
+            sleep(2)
+            shot("swipe-row-opened")
+            XCTAssertTrue(app.navigationBars.buttons.firstMatch.exists, "tapping a row opens it")
+        }
+    }
+
     func testComposerHoldToTalk() {
         openProject("Trial")
         let plus = app.descendants(matching: .any)["Compose"]

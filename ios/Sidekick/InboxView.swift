@@ -10,36 +10,129 @@ struct InboxView: View {
             .sorted { ($0.item.closed ?? $0.item.created) > ($1.item.closed ?? $1.item.created) }
     }
 
+    @State private var confirmReject: Item?
+    @State private var actionError: String?
+
     var body: some View {
-        ScrollView {
+        // A List (not a ScrollView) so rows can be swiped: right to approve, left to reject.
+        List {
             VStack(alignment: .leading, spacing: 20) {
                 Text("Inbox")
                     .font(Theme.serif(34))
                     .foregroundStyle(Theme.text)
                 segmented
-                let rows = showResolved ? Array(resolved.prefix(50)) : pending
-                if rows.isEmpty {
-                    Text(showResolved ? "Nothing resolved yet." : "Nothing needs you.")
-                        .font(Theme.serif(18))
-                        .foregroundStyle(Theme.secondary)
-                        .padding(.top, 24)
-                } else {
-                    VStack(spacing: 0) {
-                        ForEach(rows) { entry in
-                            NavigationLink(value: Route.item(entry.id)) { InboxRow(entry: entry) }
-                                .buttonStyle(.plain)
-                            Hairline()
-                        }
-                    }
+                if let actionError {
+                    Text(actionError).font(.system(size: 12)).foregroundStyle(Theme.accent)
                 }
             }
-            .padding(.horizontal, 20)
             .padding(.top, 8)
+            .padding(.bottom, 8)
+            .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+            .listRowSeparator(.hidden)
+            .listRowBackground(Theme.background)
+
+            let rows = showResolved ? Array(resolved.prefix(50)) : pending
+            if rows.isEmpty {
+                Text(showResolved ? "Nothing resolved yet." : "Nothing needs you.")
+                    .font(Theme.serif(18))
+                    .foregroundStyle(Theme.secondary)
+                    .padding(.top, 16)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Theme.background)
+            }
+            ForEach(rows) { entry in
+                InboxRow(entry: entry)
+                    .background(NavigationLink(value: Route.item(entry.id)) { EmptyView() }.opacity(0))
+                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                    .listRowBackground(Theme.background)
+                    .listRowSeparatorTint(Theme.line)
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) { approveAction(entry.item) }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) { rejectAction(entry.item) }
+            }
         }
+        .listStyle(.plain)
+        .environment(\.defaultMinListRowHeight, 0)
         .readingRoom()
         .hidesNavigationBar()
         .refreshable { await model.refreshInbox() }
         .composer(nil)
+        .confirmationDialog(
+            confirmReject?.kind == .proposal ? "Decline this thread?" : "Reject this?",
+            isPresented: Binding(get: { confirmReject != nil }, set: { if !$0 { confirmReject = nil } }),
+            titleVisibility: .visible,
+            presenting: confirmReject
+        ) { item in
+            Button(item.kind == .proposal ? "Decline" : "Reject", role: .destructive) {
+                act { try await model.review(item, .reject, comment: "") }
+            }
+        } message: { item in
+            Text(item.kind == .proposal ? "The coordinator won't start it." : "The agent drops this direction and asks before trying another.")
+        }
+    }
+
+    // MARK: Swipe actions
+
+    /// Swipe right: approve a review or proposal, or answer a question with its first
+    /// (recommended) option.
+    @ViewBuilder private func approveAction(_ item: Item) -> some View {
+        if item.isPending, item.kind == .review || item.kind == .proposal {
+            Button {
+                act { try await model.review(item, .approve, comment: "") }
+            } label: {
+                Label("Approve", systemImage: "checkmark")
+            }
+            .tint(Theme.accent)
+        } else if item.isPending, item.kind == .question, let answers = recommendedAnswers(item) {
+            Button {
+                act { try await model.answer(item, answers) }
+            } label: {
+                Label(answers.count == 1 ? answers.values.first! : "Recommended", systemImage: "checkmark")
+            }
+            .tint(Theme.accent)
+        }
+    }
+
+    /// Swipe left: reject a review or decline a proposal (confirmed), or mark a reply read.
+    @ViewBuilder private func rejectAction(_ item: Item) -> some View {
+        if item.isPending, item.kind == .review || item.kind == .proposal {
+            Button {
+                confirmReject = item
+            } label: {
+                Label(item.kind == .proposal ? "Decline" : "Reject", systemImage: "xmark")
+            }
+            .tint(Color(red: 0.55, green: 0.18, blue: 0.16))
+        } else if item.isUnreadReply {
+            Button {
+                model.markRead(ComposerTarget(item))
+            } label: {
+                Label("Read", systemImage: "envelope.open")
+            }
+            .tint(Theme.surface)
+        }
+    }
+
+    /// The first option of every question, if they all have options. Agents put their
+    /// recommended option first.
+    private func recommendedAnswers(_ item: Item) -> [String: String]? {
+        guard let questions = item.questions, !questions.isEmpty else { return nil }
+        var answers: [String: String] = [:]
+        for q in questions {
+            guard let first = q.options?.first?.label else { return nil }
+            answers[q.question] = first
+        }
+        return answers
+    }
+
+    private func act(_ work: @escaping () async throws -> Void) {
+        actionError = nil
+        Task {
+            do {
+                try await work()
+            } catch {
+                actionError = error.localizedDescription
+            }
+        }
     }
 
     private var segmented: some View {
