@@ -33,6 +33,8 @@ func main() {
 		err = cmdWhoami(args)
 	case "hook":
 		err = cmdHook(args)
+	case "template":
+		err = cmdTemplate(args)
 	case "plan":
 		err = cmdPlan(args)
 	case "propose":
@@ -62,6 +64,7 @@ func usage() {
   sidekick ask "<question>" [-o <option>]... [-multi]   ask the user; prints the answer
   sidekick review <path> -title <title> [-summary <s>]  publish a file or static site for review
   sidekick status "<headline>" -summary "<3-4 sentences>" [-link <url>] [-state ...]
+  sidekick template <dir>                                start a review page in <dir>/index.html
   sidekick plan [-f plan.json]                           publish the project plan (coordinator; JSON on stdin)
   sidekick propose "<title>" -why "<why>" [-plan f.md]   propose a new thread for the user to approve (coordinator)
   sidekick reply "<answer>" [-id <id>]                   answer a message the user sent from the app

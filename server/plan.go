@@ -232,11 +232,14 @@ func (s *Server) watchBlocked() {
 
 // notice sends the coordinator a message from Sidekick itself, tagged so the
 // prompt hook can verify it.
-func (s *Server) notice(project, text string) error {
-	it := &Item{Project: project, Kind: "notice", Text: text, State: StatePending}
+func (s *Server) notice(project, text string) error { return s.noticeTo(project, "", text) }
+
+// noticeTo sends a verified Sidekick reminder to a coordinator, or to one thread.
+func (s *Server) noticeTo(project, thread, text string) error {
+	it := &Item{Project: project, Thread: thread, Kind: "notice", Text: text, State: StatePending}
 	if err := s.store.Add(it); err != nil {
 		return err
 	}
 	s.store.Close(it.ID, "notice", StateAnswered, nil)
-	return s.deliver.Prompt(project, "", fmt.Sprintf("[sidekick notice:%s] %s", it.ID, text))
+	return s.deliver.Prompt(project, thread, fmt.Sprintf("[sidekick notice:%s] %s", it.ID, text))
 }

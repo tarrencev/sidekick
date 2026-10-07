@@ -519,13 +519,14 @@ func (s *Server) reopen(w http.ResponseWriter, r *http.Request) {
 func (s *Server) postNotice(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Project string `json:"project"`
+		Thread  string `json:"thread"`
 		Text    string `json:"text"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Project == "" || strings.TrimSpace(body.Text) == "" {
 		http.Error(w, "project and text required", http.StatusBadRequest)
 		return
 	}
-	if err := s.notice(body.Project, strings.TrimSpace(body.Text)); err != nil {
+	if err := s.noticeTo(body.Project, body.Thread, strings.TrimSpace(body.Text)); err != nil {
 		http.Error(w, err.Error(), http.StatusConflict)
 		return
 	}
@@ -543,10 +544,11 @@ func (s *Server) cancel(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) requestReview(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Origin  Origin `json:"origin"`
-		Path    string `json:"path"`
-		Title   string `json:"title"`
-		Summary string `json:"summary"`
+		Origin   Origin `json:"origin"`
+		Path     string `json:"path"`
+		Title    string `json:"title"`
+		Summary  string `json:"summary"`
+		Replaces string `json:"replaces"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Path == "" || strings.TrimSpace(body.Title) == "" {
 		http.Error(w, "path and title required", http.StatusBadRequest)
@@ -571,6 +573,17 @@ func (s *Server) requestReview(w http.ResponseWriter, r *http.Request) {
 	if err := s.store.Add(it); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+	if body.Replaces != "" {
+		// A republished artifact withdraws the version it replaces.
+		s.store.Update(body.Replaces, func(old *Item) error {
+			if old.Kind != "review" || old.Project != project || old.State != StatePending {
+				return ErrNotPending
+			}
+			old.State, old.Closed = StateCancelled, time.Now().UTC()
+			old.Comment = "Replaced by a newer version: " + it.Title
+			return nil
+		})
 	}
 	s.notifyPush(*it)
 	writeJSONResponse(w, it)

@@ -11,8 +11,10 @@ ways to get their input; load the `sidekick` skill for details.
   `[sidekick answer:…]` message. Frame the decision, recommended option first; never
   guess. Decisions are always questions, never sections of a review page.
 - **Reviews:** anything the user should look at (a page, report, design, screenshots, a
-  static build) goes through `sidekick review <file-or-dir> -title "…" -summary "what to
-  look at and what decision you need"`. Keep working; the verdict arrives later as a
+  build) goes through `sidekick review <dir> -title "…" -summary "what to look at and
+  what decision you need"`, as one HTML page that explains itself in plain English and
+  embeds its images and videos with captions (start from `sidekick template <dir>`;
+  folders of files and bare images are refused). Keep working; the verdict arrives later as a
   message starting with `[sidekick]`. Put files you hand over in your `library/` folder
   too, as usual.
 - **Summary:** keep a 3-4 sentence plain summary of where things stand current with

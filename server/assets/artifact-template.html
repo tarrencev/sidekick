@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Sidekick review page. The user reads this on their phone, often with no other
+     context. Replace every [[…]] (publishing refuses a page that still has one), write
+     in plain, short sentences, and delete any section you don't need. -->
+<title>[[Short title: what this is]]</title>
+<style>
+  :root { --bg:#fff; --fg:#1c1b1a; --muted:#6b6863; --line:#e6e3df; --card:#f7f6f4; --accent:#e8664f; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111; --fg:#f1ede7; --muted:#9a958f; --line:#2a2826; --card:#1c1b1a; --accent:#ff7a64; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 -apple-system, system-ui, sans-serif; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 18px 64px; }
+  h1 { font: 600 28px/1.2 Georgia, "New York", serif; margin: 0 0 8px; }
+  h2 { font: 600 19px/1.3 Georgia, "New York", serif; margin: 32px 0 8px; }
+  .lede { font-size: 18px; color: var(--fg); margin: 0 0 4px; }
+  .muted { color: var(--muted); font-size: 14px; }
+  .ask { background: var(--card); border-left: 3px solid var(--accent); padding: 14px 16px; border-radius: 8px; margin: 20px 0; }
+  figure { margin: 18px 0; }
+  figure img, figure video { width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); display: block; background: var(--card); }
+  figcaption { color: var(--muted); font-size: 14px; margin-top: 6px; }
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .compare figcaption b { color: var(--fg); }
+  @media (max-width: 600px) { .compare { grid-template-columns: 1fr; } }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); }
+  details { margin-top: 28px; color: var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>[[Short title: what this is]]</h1>
+  <p class="lede">[[One or two sentences: what this is and why it matters, as you'd say it to someone walking in cold.]]</p>
+  <p class="muted">[[Project or thread · date · PR link if there is one]]</p>
+
+  <div class="ask">
+    <strong>What I need from you:</strong> [[the one decision or check, e.g. "Approve if the new toggle wording reads clearly; otherwise tell me what to change."]]
+  </div>
+
+  <h2>What changed</h2>
+  <p>[[Plain-English summary of the change and its effect on people using it. No jargon, file names or internal IDs.]]</p>
+
+  <h2>Before and after</h2>
+  <div class="compare">
+    <figure>
+      <img src="[[before.png]]" alt="[[what the before image shows]]">
+      <figcaption><b>Before:</b> [[what to notice]]</figcaption>
+    </figure>
+    <figure>
+      <img src="[[after.png]]" alt="[[what the after image shows]]">
+      <figcaption><b>After:</b> [[what's different and why it's better]]</figcaption>
+    </figure>
+  </div>
+
+  <h2>[[Another thing to look at]]</h2>
+  <figure>
+    <img src="[[screenshot.png]]" alt="[[what it shows]]">
+    <figcaption>[[What to look at in this image, in one sentence.]]</figcaption>
+  </figure>
+
+  <h2>Things to check</h2>
+  <ul>
+    <li>[[A specific thing to verify]]</li>
+    <li>[[Anything risky, uncertain or not done yet]]</li>
+  </ul>
+
+  <details>
+    <summary>Details for the curious</summary>
+    <p>[[Optional: numbers, how it was tested, links. Keep the main page readable without this.]]</p>
+  </details>
+</main>
+</body>
+</html>

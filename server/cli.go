@@ -140,6 +140,7 @@ func cmdReview(args []string) error {
 	fs := flag.NewFlagSet("review", flag.ExitOnError)
 	title := fs.String("title", "", "what the user is reviewing")
 	summary := fs.String("summary", "", "what to look at and what decision you need")
+	replaces := fs.String("replaces", "", "id of an earlier review this one replaces (withdraws it)")
 	fs.Parse(reorder(args))
 	if fs.NArg() != 1 || *title == "" {
 		return errors.New("usage: sidekick review <file-or-dir> -title <title> [-summary <summary>]")
@@ -150,11 +151,11 @@ func cmdReview(args []string) error {
 	}
 	var it Item
 	if err := call(context.Background(), "POST", "/v1/review", map[string]any{
-		"origin": currentOrigin(""), "path": p, "title": *title, "summary": *summary,
+		"origin": currentOrigin(""), "path": p, "title": *title, "summary": *summary, "replaces": *replaces,
 	}, &it); err != nil {
 		return err
 	}
-	fmt.Printf("Published for review: %s\nThe user's verdict will arrive as a message starting with [sidekick]. Keep working; don't wait for it.\n", it.URL)
+	fmt.Printf("Published for review (id %s): %s\nThe user's verdict will arrive as a message starting with [sidekick]. Keep working; don't wait for it.\n", it.ID, it.URL)
 	return nil
 }
 
@@ -333,5 +334,25 @@ func cmdPropose(args []string) error {
 		return err
 	}
 	fmt.Println("Proposed. Don't start it yet: the user's decision arrives as a message starting with [sidekick].")
+	return nil
+}
+
+// cmdTemplate writes the starter review page into a folder.
+func cmdTemplate(args []string) error {
+	if len(args) != 1 {
+		return errors.New("usage: sidekick template <dir>   (writes <dir>/index.html to fill in, then: sidekick review <dir>)")
+	}
+	if err := os.MkdirAll(args[0], 0o755); err != nil {
+		return err
+	}
+	out := filepath.Join(args[0], "index.html")
+	if _, err := os.Stat(out); err == nil {
+		return fmt.Errorf("%s already exists", out)
+	}
+	page, _ := assets.ReadFile("assets/artifact-template.html")
+	if err := os.WriteFile(out, page, 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("Wrote %s. Put your images and videos next to it, replace every [[…]], then: sidekick review %s -title \"…\" -summary \"…\"\n", out, args[0])
 	return nil
 }

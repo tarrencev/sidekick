@@ -39,21 +39,39 @@ have nothing else to do.
 
 ## 2. Ask for a review
 
-When you've made something the user should look at (a page, a report, a design, a
-static build, screenshots), publish it:
+When you've made something the user should look at (a page, a report, a design,
+screenshots, a build), publish it as **one HTML page that explains itself**. The user
+reads it on their phone, often days later and with no other context, so write it for a
+person walking in cold:
+
+- Open with what this is and why it matters, in one or two plain sentences.
+- Say exactly what you need from them ("Approve if…; otherwise tell me what to change").
+- Explain what changed and its effect on people, without jargon, file names or IDs.
+- **Embed** every image and video on the page (`<img>`, `<video>`) with a caption saying
+  what to notice. Put before/after side by side and label them. Never link files instead.
+- List anything risky, uncertain or not done. Tuck numbers and test notes into a
+  collapsed "Details" section.
+
+Start from the template, fill in every `[[…]]`, drop your media next to it, publish:
 
 ```bash
-sidekick review ./out -title "Checkout redesign" \
+sidekick template ./review          # writes ./review/index.html
+# …edit ./review/index.html, copy screenshots into ./review/
+sidekick review ./review -title "Checkout redesign" \
   -summary "Compare the two layouts on mobile; I need a pick before wiring payments."
 ```
 
-- The path can be one file or a static-site directory (served from `index.html`).
-- It's snapshotted: later edits don't change what the user sees. Republish to update.
+Publishing refuses anything else (a folder without `index.html`, a bare image, a page
+of links, media that isn't embedded, unfilled placeholders) and says what to fix.
+
+- It's snapshotted: later edits don't change what the user sees. To update it, publish
+  again with `-replaces <id>` (the id `sidekick review` printed) so the old one is
+  withdrawn from their inbox.
 - This doesn't block. Keep working on anything that doesn't depend on it. The verdict
-  arrives later as a message starting with `[sidekick] Review of …`: approved, the
+  arrives later as a message starting with `[sidekick verdict:<id>]`: approved, the
   changes the user asked for, or rejected (drop that direction and ask before trying
   another).
-- Write the summary as what to look at and what decision you need, not what you did.
+- The `-summary` says what to look at and what decision you need, not what you did.
 
 ## 3. Keep your summary current
 
