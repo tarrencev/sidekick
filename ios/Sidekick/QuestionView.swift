@@ -32,7 +32,7 @@ struct QuestionView: View {
         .hidesTabBar()
         .navigationTitle("Answer question")
         .inlineTitle()
-        .composer(ComposerTarget(item))
+        .composer(ComposerTarget(item), tabBar: false)
         .safeAreaInset(edge: .bottom) {
             if item.isPending {
                 VStack(spacing: 8) {
@@ -49,7 +49,7 @@ struct QuestionView: View {
     private func questionBlock(_ q: Question) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 10) {
-                Text(q.question)
+                LinkedText(q.question)
                     .font(Theme.serif(28))
                     .foregroundStyle(Theme.text)
                     .fixedSize(horizontal: false, vertical: true)
@@ -146,38 +146,56 @@ private struct OptionRow: View {
     let selected: Bool
     let action: () -> Void
 
+    /// Links can't be tapped inside the option's button, so text that carries a URL is
+    /// shown below it instead, where its links work.
+    private var linksInLabel: [URL] { Links.urls(in: option.label) }
+    private var descriptionHasLinks: Bool { !Links.urls(in: option.description ?? "").isEmpty }
+
     var body: some View {
-        Button(action: action) {
-            HStack(alignment: .top, spacing: 14) {
-                ZStack {
-                    if multi {
-                        RoundedRectangle(cornerRadius: 5).strokeBorder(selected ? Theme.accent : Theme.tertiary, lineWidth: 1.3)
-                        if selected { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.accent) }
-                    } else {
-                        Circle().strokeBorder(selected ? Theme.accent : Theme.tertiary, lineWidth: 1.3)
-                        if selected { Circle().fill(Theme.accent).padding(5) }
+        VStack(alignment: .leading, spacing: 6) {
+            Button(action: action) {
+                HStack(alignment: .top, spacing: 14) {
+                    ZStack {
+                        if multi {
+                            RoundedRectangle(cornerRadius: 5).strokeBorder(selected ? Theme.accent : Theme.tertiary, lineWidth: 1.3)
+                            if selected { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.accent) }
+                        } else {
+                            Circle().strokeBorder(selected ? Theme.accent : Theme.tertiary, lineWidth: 1.3)
+                            if selected { Circle().fill(Theme.accent).padding(5) }
+                        }
                     }
-                }
-                .frame(width: 20, height: 20)
-                .padding(.top, 1)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("\(letter). \(option.label)")
-                        .font(.system(size: 15))
-                        .foregroundStyle(Theme.text)
-                    if let d = option.description, !d.isEmpty {
-                        Text(d)
-                            .font(.system(size: 13))
-                            .foregroundStyle(Theme.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                    .frame(width: 20, height: 20)
+                    .padding(.top, 1)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("\(letter). \(option.label)")
+                            .font(.system(size: 15))
+                            .foregroundStyle(Theme.text)
+                        if let d = option.description, !d.isEmpty, !descriptionHasLinks {
+                            Text(d)
+                                .font(.system(size: 13))
+                                .foregroundStyle(Theme.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
+                    Spacer(minLength: 0)
                 }
-                Spacer(minLength: 0)
+                .contentShape(Rectangle())
             }
-            .padding(.vertical, 12)
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+            .sensoryFeedback(.selection, trigger: selected)
+
+            if let d = option.description, !d.isEmpty, descriptionHasLinks {
+                LinkedText(d)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Theme.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 34)
+            }
+            ForEach(linksInLabel, id: \.self) { url in
+                LinkPill(url: url).padding(.leading, 34)
+            }
         }
-        .buttonStyle(.plain)
-        .sensoryFeedback(.selection, trigger: selected)
+        .padding(.vertical, 12)
     }
 
     private var letter: String { String(UnicodeScalar(UInt8(65 + index % 26))) }

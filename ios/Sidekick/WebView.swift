@@ -101,7 +101,7 @@ struct FileView: View {
             }
         }
         .readingRoom()
-        .composer(nil)
+        .composer(nil, tabBar: false)
         .hidesTabBar()
         .navigationTitle(title)
         .inlineTitle()

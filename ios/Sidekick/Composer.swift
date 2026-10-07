@@ -82,14 +82,16 @@ struct HoldToTalkCircle<Label: View>: View {
 
 extension View {
     /// Adds the floating + composer. `target` is who messages go to; nil asks for a project.
-    func composer(_ target: ComposerTarget?) -> some View {
-        modifier(FloatingComposer(fixedTarget: target))
+    /// Detail screens pass `tabBar: false`: the tab bar stays hidden there either way.
+    func composer(_ target: ComposerTarget?, tabBar: Bool = true) -> some View {
+        modifier(FloatingComposer(fixedTarget: target, showsTabBar: tabBar))
     }
 }
 
 private struct FloatingComposer: ViewModifier {
     @Environment(AppModel.self) private var model
     let fixedTarget: ComposerTarget?
+    var showsTabBar = true
 
     @State private var open = false
     @State private var text = ""
@@ -145,7 +147,7 @@ private struct FloatingComposer: ViewModifier {
         #if os(iOS)
         // Full screen means no tab bar under the input. .automatic leaves screens that
         // already hide it (questions, reviews, threads) as they are once the chat closes.
-        .toolbar(open ? .hidden : .automatic, for: .tabBar)
+        .toolbar(open || !showsTabBar ? .hidden : .automatic, for: .tabBar)
         #endif
         // The chat takes the whole content area: room for long replies.
         .overlay {

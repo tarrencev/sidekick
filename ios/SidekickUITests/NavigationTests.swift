@@ -97,6 +97,22 @@ final class SidekickFlows: XCTestCase {
         XCTAssertFalse(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'inbox reply ok'")).firstMatch.exists, "read replies leave Pending")
     }
 
+    /// Links in a question's text and options open the browser; options still select.
+    func testQuestionLinks() {
+        openInbox("Link test")
+        sleep(2)
+        shot("question-links")
+        XCTAssertFalse(app.tabBars.firstMatch.isHittable, "question screens hide the tab bar")
+        // Selecting by tapping the option's label still works.
+        app.buttons.containing(NSPredicate(format: "label CONTAINS 'Use the long page'")).firstMatch.tap()
+        shot("question-links-selected")
+        // The link in that option's description opens Safari.
+        app.links.containing(NSPredicate(format: "label CONTAINS 'example.com/b'")).firstMatch.tap()
+        let safari = XCUIApplication(bundleIdentifier: "com.apple.mobilesafari")
+        XCTAssertTrue(safari.wait(for: .runningForeground, timeout: 10), "the link opened the browser")
+        app.activate()
+    }
+
     func testComposerHoldToTalk() {
         openProject("Trial")
         let plus = app.descendants(matching: .any)["Compose"]

@@ -70,7 +70,7 @@ struct ProjectView: View {
                     .foregroundStyle(Theme.text)
                     .fixedSize(horizontal: false, vertical: true)
                 if let summary = status.summary, !summary.isEmpty {
-                    Text(summary)
+                    LinkedText(summary)
                         .font(.system(size: 16))
                         .foregroundStyle(Theme.text.opacity(0.85))
                         .lineSpacing(3)
@@ -135,7 +135,7 @@ private struct ThreadRow: View {
 
             if expanded {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text(thread.summary?.isEmpty == false ? thread.summary! : (thread.line ?? "No summary yet."))
+                    LinkedText(thread.summary?.isEmpty == false ? thread.summary! : (thread.line ?? "No summary yet."))
                         .font(.system(size: 14))
                         .foregroundStyle(Theme.text.opacity(0.82))
                         .lineSpacing(2)

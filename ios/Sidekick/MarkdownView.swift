@@ -14,6 +14,7 @@ struct MarkdownView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .tint(Theme.accent)
+        .textSelection(.enabled)
     }
 
     enum Block {
@@ -64,8 +65,7 @@ struct MarkdownView: View {
     }
 
     private func inline(_ s: String) -> AttributedString {
-        (try? AttributedString(markdown: s, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
-            ?? AttributedString(s)
+        Links.attributed(s) // markdown links plus bare URLs
     }
 
     static func blocks(_ text: String) -> [Block] {

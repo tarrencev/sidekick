@@ -21,7 +21,7 @@ struct ThreadView: View {
                             Text(line).font(.system(size: 13)).foregroundStyle(Theme.tertiary)
                         }
                         if let summary = d.summary, !summary.isEmpty {
-                            Text(summary)
+                            LinkedText(summary)
                                 .font(.system(size: 16))
                                 .foregroundStyle(Theme.text.opacity(0.9))
                                 .lineSpacing(3)
@@ -75,7 +75,7 @@ struct ThreadView: View {
         .readingRoom()
         .hidesTabBar()
         .inlineTitle()
-        .composer(.thread(slug, tid))
+        .composer(.thread(slug, tid), tabBar: false)
         .refreshable { await model.refreshThread(slug, tid) }
         .task { await model.refreshThread(slug, tid) }
     }

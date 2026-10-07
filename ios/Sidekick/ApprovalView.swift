@@ -23,7 +23,7 @@ struct ApprovalView: View {
                         Text(item.title ?? "Proposed thread").font(Theme.serif(28)).foregroundStyle(Theme.text)
                             .fixedSize(horizontal: false, vertical: true)
                         if let why = item.summary, !why.isEmpty {
-                            Text(why).font(.system(size: 16)).foregroundStyle(Theme.text.opacity(0.85)).lineSpacing(3)
+                            LinkedText(why).font(.system(size: 16)).foregroundStyle(Theme.text.opacity(0.85)).lineSpacing(3)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         if let plan = item.text, !plan.isEmpty {
@@ -59,7 +59,7 @@ struct ApprovalView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if item.kind != .proposal, showSummary || !item.isPending, let summary = item.summary, !summary.isEmpty {
-                Text(summary)
+                LinkedText(summary)
                     .font(.system(size: 14))
                     .foregroundStyle(Theme.text.opacity(0.85))
                     .frame(maxWidth: .infinity, alignment: .leading)
