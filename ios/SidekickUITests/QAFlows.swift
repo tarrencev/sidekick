@@ -121,6 +121,27 @@ final class QAFlows: XCTestCase {
         shot("qa-resolved")
     }
 
+    func testQuestionWithContext() {
+        let q = unique("QA: which logo should ship?")
+        let id = Demo.askWithContext(pane: "w1:p1", q, options: ["Logo A", "Logo B"])
+        app.tabBars.buttons["Inbox"].tap()
+        XCTAssertTrue(text(q).waitForExistence(timeout: 10))
+        XCTAssertTrue(text("Question · with context").exists, "the inbox says it has context")
+        text(q).tap()
+        let card = app.descendants(matching: .any)["question.context"]
+        XCTAssertTrue(card.waitForExistence(timeout: 10), "the context card is in the question")
+        XCTAssertTrue(app.webViews.staticTexts.containing(NSPredicate(format: "label CONTAINS 'bolder square mark'")).firstMatch.waitForExistence(timeout: 15), "the page renders inline")
+        shot("qa-question-context")
+        button("Full screen").tap()
+        XCTAssertTrue(app.webViews.staticTexts.containing(NSPredicate(format: "label CONTAINS 'Logo B'")).firstMatch.waitForExistence(timeout: 10), "full screen shows the page")
+        app.navigationBars.buttons.firstMatch.tap()
+        app.swipeUp()
+        button("Logo B").tap()
+        app.buttons["Submit answer"].tap()
+        XCTAssertTrue(app.staticTexts["Inbox"].waitForExistence(timeout: 10))
+        XCTAssertEqual((Demo.item(id)?["answers"] as? [String: String])?[q], "Logo B")
+    }
+
     func testQuestionOtherReturnAndLinks() {
         let q = unique("QA: what should the banner say? See https://example.com/brand")
         _ = Demo.ask(pane: "w1:p1", q, options: ["Spring sale::https://example.com/spring"])

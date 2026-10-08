@@ -27,6 +27,19 @@ You are never blocked on the user:
 - Put each option in `options` (recommended one first), never as a list in the text.
 - Never guess an answer to keep moving; work on something else instead.
 
+**Show what the question is about.** When a decision depends on something the user
+should see (images to pick from, a before/after, a draft), put it in the question
+instead of sending a link to look at first. Build a self-explaining page exactly like a
+review page (`sidekick template <dir>`, embed the images with captions), then:
+
+```bash
+sidekick context ./logo-options      # attaches to your next question from this pane
+```
+
+and ask with `AskUserQuestion` as usual. The page appears inside the question, above
+the options, so the user looks and answers in one place. Name the options after what
+the page shows ("Logo A: the coral circle").
+
 Agents without a question tool (e.g. Codex) run:
 
 ```bash
@@ -34,7 +47,8 @@ sidekick ask "Which database should the cache use?" \
   -o "SQLite::single file, no new service" -o "Postgres::shares the main DB"
 ```
 
-It returns at once and the answer arrives the same way. Use `-wait 30m` only if you truly
+It returns at once and the answer arrives the same way. Add `-context <dir>` to show a
+page with the question. Use `-wait 30m` only if you truly
 have nothing else to do.
 
 ## 2. Ask for a review

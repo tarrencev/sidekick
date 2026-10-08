@@ -59,6 +59,10 @@ struct QuestionView: View {
                     .font(.ui(size: 14))
                     .foregroundStyle(Theme.secondary)
             }
+            // What the decision is about, shown right here (only with the first question).
+            if let page = item.context, q == questions.first {
+                ContextCard(url: page, title: q.question)
+            }
             let options = q.options ?? []
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(options.enumerated()), id: \.element.label) { i, option in
@@ -202,4 +206,46 @@ private struct OptionRow: View {
     }
 
     private var letter: String { String(UnicodeScalar(UInt8(65 + index % 26))) }
+}
+
+/// The agent's context page, embedded in the question, with a way to see it full screen.
+private struct ContextCard: View {
+    let url: URL
+    let title: String
+
+    var body: some View {
+        VStack(spacing: 0) {
+            WebView(url: url)
+                .frame(height: height)
+            Hairline()
+            NavigationLink(value: Route.file(title: "Context", url: url)) {
+                HStack {
+                    Image(systemName: "photo.on.rectangle")
+                    Text("Context from the agent")
+                    Spacer()
+                    Text("Full screen")
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                }
+                .font(.ui(size: 13, weight: .medium))
+                .foregroundStyle(Theme.accent)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 11)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .background(Theme.surface)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.line))
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("question.context")
+    }
+
+    private var height: CGFloat {
+        #if os(iOS)
+        380
+        #else
+        360 // leaves the options in view on a laptop screen
+        #endif
+    }
 }

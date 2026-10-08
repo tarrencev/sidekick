@@ -103,9 +103,17 @@ func cmdAsk(args []string) error {
 	header := fs.String("header", "", "short label for the question")
 	wait := fs.Duration("wait", 0, "block until answered, up to this long (default: don't wait; the answer arrives in your pane)")
 	jsonOut := fs.Bool("json", false, "print the full item as JSON")
+	contextDir := fs.String("context", "", "a self-explaining HTML page (dir or file) shown with the question")
 	fs.Parse(reorder(args))
 	if fs.NArg() != 1 {
-		return errors.New(`usage: sidekick ask "<question>" [-o <option>]...`)
+		return errors.New(`usage: sidekick ask "<question>" [-o <option>]... [-context <dir>]`)
+	}
+	if *contextDir != "" {
+		abs, err := filepath.Abs(*contextDir)
+		if err != nil {
+			return err
+		}
+		*contextDir = abs
 	}
 	q := Question{Question: fs.Arg(0), Header: *header, MultiSelect: *multi}
 	for _, o := range opts {
@@ -114,7 +122,7 @@ func cmdAsk(args []string) error {
 	}
 	if *wait == 0 {
 		var it Item
-		if err := call(context.Background(), "POST", "/v1/ask", map[string]any{"origin": currentOrigin(""), "questions": []Question{q}, "async": true}, &it); err != nil {
+		if err := call(context.Background(), "POST", "/v1/ask", map[string]any{"origin": currentOrigin(""), "questions": []Question{q}, "async": true, "context": *contextDir}, &it); err != nil {
 			return err
 		}
 		fmt.Printf("Sent to the user's Sidekick inbox. Keep working on anything that doesn't depend on it; their answer will arrive in this pane as a message starting with [sidekick answer:%s].\n", it.ID)
@@ -354,5 +362,22 @@ func cmdTemplate(args []string) error {
 		return err
 	}
 	fmt.Printf("Wrote %s. Put your images and videos next to it, replace every [[…]], then: sidekick review %s -title \"…\" -summary \"…\"\n", out, args[0])
+	return nil
+}
+
+// cmdContext publishes a page that the pane's next question will show.
+func cmdContext(args []string) error {
+	if len(args) != 1 {
+		return errors.New("usage: sidekick context <dir-or-html-file>   (then ask your question)")
+	}
+	p, err := filepath.Abs(args[0])
+	if err != nil {
+		return err
+	}
+	var out map[string]string
+	if err := call(context.Background(), "POST", "/v1/context", map[string]any{"origin": currentOrigin(""), "path": p}, &out); err != nil {
+		return err
+	}
+	fmt.Printf("Context ready (%s). Ask your question now (AskUserQuestion or sidekick ask): the next question from this pane shows it.\n", out["url"])
 	return nil
 }

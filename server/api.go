@@ -21,7 +21,9 @@ type Server struct {
 	artifactURL string // public base URL of the artifact origin, e.g. https://dl.ts.net:7444
 	notifyURL   string // optional ntfy topic URL
 	prs         *PRWatcher
-	apns        *APNs
+
+	pendingContexts contexts
+	apns            *APNs
 
 	mu     sync.Mutex
 	leases map[string]int // live agent connections waiting on a question
@@ -374,6 +376,7 @@ func (s *Server) agentMux() *http.ServeMux {
 	m.HandleFunc("POST /v1/items/{id}/reopen", s.reopen)
 	m.HandleFunc("POST /v1/notice", s.postNotice)
 	m.HandleFunc("POST /v1/review", s.requestReview)
+	m.HandleFunc("POST /v1/context", s.postContext)
 	m.HandleFunc("POST /v1/status", s.setStatus)
 	m.HandleFunc("POST /v1/whoami", s.whoami)
 	m.HandleFunc("POST /v1/plan", s.setPlan)
@@ -406,6 +409,7 @@ func (s *Server) ask(w http.ResponseWriter, r *http.Request) {
 		Origin    Origin     `json:"origin"`
 		Questions []Question `json:"questions"`
 		Async     bool       `json:"async"`
+		Context   string     `json:"context"` // optional page to publish and show with the question
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body.Questions) == 0 {
 		http.Error(w, "questions required", http.StatusBadRequest)
@@ -422,6 +426,16 @@ func (s *Server) ask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	it := &Item{Project: project, Thread: thread, Kind: "question", Origin: body.Origin, Questions: body.Questions, Async: body.Async}
+	if body.Context != "" {
+		url, err := s.publishContext(project, body.Context)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		it.Context = url
+	} else {
+		it.Context = s.pendingContexts.take(body.Origin) // from `sidekick context`
+	}
 	if err := s.store.Add(it); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

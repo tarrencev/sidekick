@@ -148,6 +148,8 @@ struct Item: Codable, Identifiable, Hashable {
 
     let questions: [Question]?
     let answers: [String: String]?
+    /// A page shown with a question (images to choose from, a comparison).
+    let context: URL?
 
     let title: String?
     let summary: String?

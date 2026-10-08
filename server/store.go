@@ -26,7 +26,9 @@ type Item struct {
 
 	// question. Async questions don't hold the agent: it keeps working and the
 	// answer is typed into its pane once the user gives it.
-	Async     bool              `json:"async,omitempty"`
+	Async bool `json:"async,omitempty"`
+	// Context is a page shown inside the question (images, a comparison): its URL.
+	Context   string            `json:"context,omitempty"`
 	Questions []Question        `json:"questions,omitempty"`
 	Answers   map[string]string `json:"answers,omitempty"`
 

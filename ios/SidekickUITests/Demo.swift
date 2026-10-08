@@ -32,6 +32,32 @@ enum Demo {
         return r?["id"] as? String ?? ""
     }
 
+    /// A question with a context page: two logo options drawn inline, to pick from.
+    static func askWithContext(pane: String, _ question: String, options: [String]) -> String {
+        let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let page = """
+        <!doctype html><meta name=viewport content="width=device-width,initial-scale=1">
+        <style>body{background:#111;color:#eee;font:15px system-ui;margin:16px}.row{display:flex;gap:12px}
+        figure{flex:1;margin:0}figcaption{color:#999;font-size:13px;margin-top:6px}</style>
+        <h1>Two logo options</h1>
+        <p>These are the two logo directions for the spring storefront. Logo A keeps the coral circle we use today; \
+        Logo B moves to a bolder square mark that reads better at small sizes, such as the app icon and the favicon. \
+        Pick the one that should ship with the spring sale.</p>
+        <div class=row>
+        <figure><svg viewBox="0 0 100 100" width="100%"><rect width=100 height=100 fill="#1b1b1b"/><circle cx=50 cy=50 r=30 fill="#ff7a64"/></svg><figcaption>Logo A: the current coral circle</figcaption></figure>
+        <figure><svg viewBox="0 0 100 100" width="100%"><rect width=100 height=100 fill="#1b1b1b"/><rect x=22 y=22 width=56 height=56 rx=8 fill="#5b8cff"/></svg><figcaption>Logo B: a bold blue square</figcaption></figure>
+        </div>
+        """
+        try? page.write(to: dir.appending(path: "index.html"), atomically: true, encoding: .utf8)
+        let opts = options.map { ["label": $0] }
+        let r = request(agent.appending(path: "v1/ask"), "POST",
+                        ["origin": origin(pane), "async": true, "context": dir.path,
+                         "questions": [["question": question, "options": opts]]]) as? [String: Any]
+        if r?["context"] == nil { print("Demo.askWithContext failed: \(String(describing: r))") }
+        return r?["id"] as? String ?? ""
+    }
+
     static func review(pane: String, title: String) -> String {
         let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

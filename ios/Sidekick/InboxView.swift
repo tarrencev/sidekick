@@ -176,6 +176,7 @@ private struct InboxRow: View {
     private var label: String {
         guard item.needsYou else { return item.outcome }
         if item.kind == .message, entry.unread > 1 { return "Reply · \(entry.unread) new" }
+        if item.kind == .question, item.context != nil { return "Question · with context" }
         return item.kindLabel
     }
 

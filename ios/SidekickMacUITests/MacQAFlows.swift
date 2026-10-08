@@ -62,6 +62,24 @@ final class MacQAFlows: XCTestCase {
         XCTAssertEqual((Demo.item(id)?["answers"] as? [String: String])?[q], "US")
     }
 
+    func testQuestionWithContext() {
+        let q = unique("Mac QA: which logo should ship?")
+        let id = Demo.askWithContext(pane: "w1:p1", q, options: ["Logo A", "Logo B"])
+        sidebar("Inbox")
+        XCTAssertTrue(text(q).waitForExistence(timeout: 15))
+        text(q).click()
+        XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 15), "the context page renders in the question")
+        sleep(2)
+        shot("mac-question-context")
+        let logoB = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Logo B'")).firstMatch
+        // Scroll the page from the title: over the embedded page, the page itself scrolls.
+        for _ in 0..<5 where !logoB.isHittable { text(q).scroll(byDeltaX: 0, deltaY: -200) }
+        logoB.click()
+        app.buttons["Submit answer"].click()
+        XCTAssertTrue(text(q).waitForNonExistence(timeout: 10))
+        XCTAssertEqual((Demo.item(id)?["answers"] as? [String: String])?[q], "Logo B")
+    }
+
     func testApproveReview() {
         let title = unique("Mac QA review: pricing page")
         let id = Demo.review(pane: "w2:p1", title: title)

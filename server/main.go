@@ -33,6 +33,8 @@ func main() {
 		err = cmdWhoami(args)
 	case "hook":
 		err = cmdHook(args)
+	case "context":
+		err = cmdContext(args)
 	case "template":
 		err = cmdTemplate(args)
 	case "plan":
@@ -61,9 +63,10 @@ func main() {
 
 func usage() {
 	fmt.Fprint(os.Stderr, `usage:
-  sidekick ask "<question>" [-o <option>]... [-multi]   ask the user; prints the answer
+  sidekick ask "<question>" [-o <option>]... [-context <dir>]   ask the user (answer arrives later)
   sidekick review <path> -title <title> [-summary <s>]  publish a file or static site for review
   sidekick status "<headline>" -summary "<3-4 sentences>" [-link <url>] [-state ...]
+  sidekick context <dir>                                 show a page with this pane's next question
   sidekick template <dir>                                start a review page in <dir>/index.html
   sidekick plan [-f plan.json]                           publish the project plan (coordinator; JSON on stdin)
   sidekick propose "<title>" -why "<why>" [-plan f.md]   propose a new thread for the user to approve (coordinator)

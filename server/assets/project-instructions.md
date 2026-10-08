@@ -9,7 +9,9 @@ ways to get their input; load the `sidekick` skill for details.
   It reaches the user's phone and returns at once: you are never blocked on the user.
   Keep working on everything that doesn't depend on the answer; it arrives later as a
   `[sidekick answer:…]` message. Frame the decision, recommended option first; never
-  guess. Decisions are always questions, never sections of a review page.
+  guess. Decisions are always questions, never sections of a review page. If the
+  decision is about something to look at (images, a before/after), run `sidekick
+  context <dir>` with a page showing it just before asking, instead of linking to it.
 - **Reviews:** anything the user should look at (a page, report, design, screenshots, a
   build) goes through `sidekick review <dir> -title "…" -summary "what to look at and
   what decision you need"`, as one HTML page that explains itself in plain English and
