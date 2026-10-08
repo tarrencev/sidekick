@@ -64,11 +64,15 @@ func (s *Server) userMux() *http.ServeMux {
 
 func (s *Server) summary(pr Project) projectSummary {
 	sum := projectSummary{Project: pr, Threads: map[string]int{}}
+	convs := map[string]bool{}
 	if st, ok := s.store.Status(pr.Slug); ok {
 		sum.Status = &st
 	}
 	for _, it := range s.store.Items(pr.Slug) {
-		if (it.State == StatePending && it.Kind != "message") || unreadReply(it) {
+		if it.State == StatePending && it.Kind != "message" {
+			sum.Pending++
+		} else if unreadReply(it) && !convs[it.Thread] {
+			convs[it.Thread] = true // a conversation counts once
 			sum.Pending++
 		}
 	}
@@ -270,6 +274,8 @@ type inboxItem struct {
 	Item
 	ProjectName string `json:"projectName"`
 	ThreadTitle string `json:"threadTitle,omitempty"`
+	// Unread is, for a conversation row, how many replies in it are unread.
+	Unread int `json:"unread,omitempty"`
 }
 
 // inbox lists every item across active projects, newest first.
@@ -286,13 +292,31 @@ func (s *Server) inbox(w http.ResponseWriter, r *http.Request) {
 			titles[pr.Slug+"/"+t.ID] = t.Title
 		}
 	}
-	for _, it := range s.store.Items("") {
+	// A back-and-forth with an agent is one conversation: it gets one row, showing
+	// its newest unread reply and how many are unread. Questions, reviews and
+	// proposals each keep their own row.
+	conversation := map[string]int{}       // project/thread -> index in out
+	for _, it := range s.store.Items("") { // newest first
 		if it.Kind == "notice" || (it.Kind == "message" && !unreadReply(it)) {
 			continue // reminders and read conversations aren't for the inbox; unread replies are
 		}
-		if name, ok := names[it.Project]; ok {
-			out = append(out, inboxItem{Item: it, ProjectName: name, ThreadTitle: titles[it.Project+"/"+it.Thread]})
+		name, ok := names[it.Project]
+		if !ok {
+			continue
 		}
+		if it.Kind == "message" {
+			key := it.Project + "/" + it.Thread
+			if i, seen := conversation[key]; seen {
+				out[i].Unread++
+				continue
+			}
+			conversation[key] = len(out)
+		}
+		row := inboxItem{Item: it, ProjectName: name, ThreadTitle: titles[it.Project+"/"+it.Thread]}
+		if it.Kind == "message" {
+			row.Unread = 1
+		}
+		out = append(out, row)
 	}
 	writeJSONResponse(w, out)
 }

@@ -176,6 +176,8 @@ struct InboxItem: Codable, Identifiable, Hashable {
     let item: Item
     let projectName: String
     let threadTitle: String?
+    /// For a conversation row: how many of its replies are unread.
+    let unread: Int
 
     var id: String { item.id }
 
@@ -184,6 +186,7 @@ struct InboxItem: Codable, Identifiable, Hashable {
         let c = try decoder.container(keyedBy: Keys.self)
         projectName = try c.decode(String.self, forKey: .projectName)
         threadTitle = try c.decodeIfPresent(String.self, forKey: .threadTitle)
+        unread = try c.decodeIfPresent(Int.self, forKey: .unread) ?? 0
     }
 
     func encode(to encoder: Encoder) throws {
@@ -191,9 +194,10 @@ struct InboxItem: Codable, Identifiable, Hashable {
         var c = encoder.container(keyedBy: Keys.self)
         try c.encode(projectName, forKey: .projectName)
         try c.encodeIfPresent(threadTitle, forKey: .threadTitle)
+        try c.encode(unread, forKey: .unread)
     }
 
-    private enum Keys: String, CodingKey { case projectName, threadTitle }
+    private enum Keys: String, CodingKey { case projectName, threadTitle, unread }
 }
 
 extension Item {

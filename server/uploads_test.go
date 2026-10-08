@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // A photo sent with a message is stored on this machine and its path is typed into
@@ -61,5 +62,51 @@ func TestMessageWithAttachment(t *testing.T) {
 	body, _ = json.Marshal(map[string]any{"project": "acme", "text": "x", "attachments": []string{"20260101t000000-deadbeef"}})
 	if resp, _ := http.Post(api.URL+"/api/messages", "application/json", bytes.NewReader(body)); resp.StatusCode == 200 {
 		t.Error("an unknown attachment was accepted")
+	}
+}
+
+// Chatting back and forth is one inbox row per conversation; questions keep their own.
+func TestInboxGroupsConversations(t *testing.T) {
+	dir := t.TempDir()
+	root := filepath.Join(dir, "hp")
+	os.MkdirAll(filepath.Join(root, "acme", ".state"), 0o755)
+	os.WriteFile(filepath.Join(root, "acme", "PROJECT.md"), []byte("+++\nname = \"Acme\"\n+++\n"), 0o644)
+	store, _ := OpenStore(filepath.Join(dir, "data"))
+	srv := &Server{store: store, projects: &Projects{root: root}, leases: map[string]int{}}
+	reply := func(thread, text string) {
+		it := &Item{Project: "acme", Thread: thread, Kind: "message", Text: "q", Reply: text}
+		store.Add(it)
+		store.Close(it.ID, "message", StateReplied, func(it *Item) { it.Reply = text })
+		time.Sleep(2 * time.Millisecond) // distinct creation times
+	}
+	reply("", "first")
+	reply("", "second")
+	reply("", "third")
+	reply("t-1", "thread reply")
+	store.Add(&Item{Project: "acme", Kind: "question", Questions: []Question{{Question: "Which?"}}})
+
+	rec := httptest.NewRecorder()
+	srv.inbox(rec, httptest.NewRequest("GET", "/api/inbox", nil))
+	var rows []inboxItem
+	json.NewDecoder(rec.Body).Decode(&rows)
+	got := map[string]int{}
+	var coordinatorReply string
+	for _, r := range rows {
+		got[r.Kind+"/"+r.Thread]++
+		if r.Kind == "message" && r.Thread == "" {
+			coordinatorReply = r.Reply
+			if r.Unread != 3 {
+				t.Errorf("coordinator conversation unread = %d, want 3", r.Unread)
+			}
+		}
+	}
+	if got["message/"] != 1 || got["message/t-1"] != 1 || got["question/"] != 1 {
+		t.Fatalf("rows %v: want one coordinator conversation, one thread conversation, one question", got)
+	}
+	if coordinatorReply != "third" {
+		t.Errorf("conversation row shows %q, want the newest reply", coordinatorReply)
+	}
+	if n := srv.pendingCount(); n != 3 {
+		t.Errorf("badge = %d, want 3 (two conversations, one question)", n)
 	}
 }

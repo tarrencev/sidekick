@@ -171,12 +171,19 @@ private struct InboxRow: View {
 
     private var item: Item { entry.item }
 
+    /// "Question", "Approval"…; a conversation row says how many replies are new.
+    private var label: String {
+        guard item.needsYou else { return item.outcome }
+        if item.kind == .message, entry.unread > 1 { return "Reply · \(entry.unread) new" }
+        return item.kindLabel
+    }
+
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             icon.padding(.top, 2)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
-                    Text(item.needsYou ? item.kindLabel : item.outcome)
+                    Text(label)
                         .font(.system(size: 12))
                         .foregroundStyle(Theme.secondary)
                         .lineLimit(1)

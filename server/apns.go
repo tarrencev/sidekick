@@ -215,8 +215,12 @@ func (s *Server) registerDevice(w http.ResponseWriter, r *http.Request) {
 // pendingCount is the app icon badge: everything waiting in the inbox.
 func (s *Server) pendingCount() int {
 	n := 0
+	conversations := map[string]bool{}
 	for _, it := range s.store.Items("") {
-		if (it.State == StatePending && (it.Kind == "question" || it.Kind == "review" || it.Kind == "proposal")) || unreadReply(it) {
+		if it.State == StatePending && (it.Kind == "question" || it.Kind == "review" || it.Kind == "proposal") {
+			n++
+		} else if unreadReply(it) && !conversations[it.Project+"/"+it.Thread] {
+			conversations[it.Project+"/"+it.Thread] = true // one per conversation, like the inbox
 			n++
 		}
 	}
