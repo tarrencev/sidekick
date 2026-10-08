@@ -15,8 +15,9 @@ final class MacQAFlows: XCTestCase {
 
     override func tearDown() { app.terminate() }
 
+    /// Text in the main window. (The menu bar menu lists waiting items too; skip it.)
     func text(_ s: String) -> XCUIElement {
-        app.staticTexts.containing(NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", s, s)).firstMatch
+        app.windows.firstMatch.staticTexts.containing(NSPredicate(format: "value CONTAINS %@ OR label CONTAINS %@", s, s)).firstMatch
     }
 
     func unique(_ s: String) -> String { "\(s) \(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000)" }

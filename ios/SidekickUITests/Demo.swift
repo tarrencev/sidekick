@@ -13,7 +13,7 @@ enum Demo {
         let done = DispatchSemaphore(value: 0)
         var out: Any?
         URLSession.shared.dataTask(with: req) { data, _, _ in
-            if let data { out = try? JSONSerialization.jsonObject(with: data) }
+            if let data { out = (try? JSONSerialization.jsonObject(with: data)) ?? String(decoding: data, as: UTF8.self) }
             done.signal()
         }.resume()
         done.wait()
@@ -42,8 +42,10 @@ enum Demo {
         decide either way. The page explains itself in plain words, as every artifact must.</p>
         """
         try? page.write(to: dir.appending(path: "index.html"), atomically: true, encoding: .utf8)
-        let r = request(agent.appending(path: "v1/review"), "POST",
-                        ["origin": origin(pane), "path": dir.path, "title": title, "summary": "QA review"]) as? [String: Any]
+        let raw = request(agent.appending(path: "v1/review"), "POST",
+                          ["origin": origin(pane), "path": dir.path, "title": title, "summary": "QA review"])
+        let r = raw as? [String: Any]
+        if r?["id"] == nil { print("Demo.review failed for \(dir.path): \(String(describing: raw))") }
         return r?["id"] as? String ?? ""
     }
 

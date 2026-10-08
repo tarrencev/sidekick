@@ -46,7 +46,9 @@ of waiting to be asked, and keep their plan current. If a plan says work is bloc
 you but nothing is in your inbox, Sidekick reminds the coordinator to ask.
 
 **Mac app.** The same app on the Mac: projects and inbox in a sidebar, a menu bar item
-with what's waiting, a Dock badge, Return to send.
+with what's waiting, a Dock badge, Return to send, drag-and-drop attachments.
+
+![Sidekick on the Mac: the sidebar and a project's plan](docs/screenshots/mac.png)
 
 ## How it works
 
