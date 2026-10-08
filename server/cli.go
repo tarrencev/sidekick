@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -67,11 +68,12 @@ func interruptible() (context.Context, context.CancelFunc) {
 	return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGHUP)
 }
 
-// askAndWait pushes questions and blocks until the user answers, the question
-// is cancelled, ctx ends, or the deadline passes. ok is false unless answered.
-func askAndWait(ctx context.Context, origin Origin, qs []Question, deadline time.Time) (Item, bool, error) {
+// askAndWait pushes questions, with the context page at contextDir if any, and
+// blocks until the user answers, the question is cancelled, ctx ends, or the
+// deadline passes. ok is false unless answered.
+func askAndWait(ctx context.Context, origin Origin, qs []Question, contextDir string, deadline time.Time) (Item, bool, error) {
 	var it Item
-	if err := call(ctx, "POST", "/v1/ask", map[string]any{"origin": origin, "questions": qs}, &it); err != nil {
+	if err := call(ctx, "POST", "/v1/ask", map[string]any{"origin": origin, "questions": qs, "context": contextDir}, &it); err != nil {
 		return it, false, err
 	}
 	defer func() {
@@ -102,7 +104,7 @@ func cmdAsk(args []string) error {
 	multi := fs.Bool("multi", false, "allow picking several options")
 	header := fs.String("header", "", "short label for the question")
 	wait := fs.Duration("wait", 0, "block until answered, up to this long (default: don't wait; the answer arrives in your pane)")
-	jsonOut := fs.Bool("json", false, "print the full item as JSON")
+	jsonOut := fs.Bool("json", false, "print the full item as JSON (with -wait, once answered)")
 	contextDir := fs.String("context", "", "a self-explaining HTML page (dir or file) shown with the question")
 	fs.Parse(reorder(args))
 	if fs.NArg() != 1 {
@@ -125,12 +127,15 @@ func cmdAsk(args []string) error {
 		if err := call(context.Background(), "POST", "/v1/ask", map[string]any{"origin": currentOrigin(""), "questions": []Question{q}, "async": true, "context": *contextDir}, &it); err != nil {
 			return err
 		}
+		if *jsonOut {
+			return json.NewEncoder(os.Stdout).Encode(it)
+		}
 		fmt.Printf("Sent to the user's Sidekick inbox. Keep working on anything that doesn't depend on it; their answer will arrive in this pane as a message starting with [sidekick answer:%s].\n", it.ID)
 		return nil
 	}
 	ctx, stop := interruptible()
 	defer stop()
-	it, ok, err := askAndWait(ctx, currentOrigin(""), []Question{q}, time.Now().Add(*wait))
+	it, ok, err := askAndWait(ctx, currentOrigin(""), []Question{q}, *contextDir, time.Now().Add(*wait))
 	if err != nil {
 		return err
 	}
@@ -142,6 +147,20 @@ func cmdAsk(args []string) error {
 	}
 	fmt.Println(it.Answers[q.Question])
 	return nil
+}
+
+// cmdItem prints one question or review as JSON: its state and, once answered,
+// the answers. A helper that acts on an answer reads it here rather than
+// trusting text typed into its pane.
+func cmdItem(args []string) error {
+	if len(args) != 1 || strings.TrimSpace(args[0]) == "" {
+		return errors.New("usage: sidekick item <id>")
+	}
+	var it Item
+	if err := call(context.Background(), "GET", "/v1/items/"+url.PathEscape(strings.TrimSpace(args[0]))+"/wait?timeout=1", nil, &it); err != nil {
+		return err
+	}
+	return json.NewEncoder(os.Stdout).Encode(it)
 }
 
 func cmdReview(args []string) error {
