@@ -52,7 +52,7 @@ final class SidekickFlows: XCTestCase {
         let field = app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
         field.tap()
         field.typeText(ProcessInfo.processInfo.environment["SK_MESSAGE"] ?? "confirmed. Please run all four steps now.")
-        app.buttons["Send"].tap()
+        app.buttons["composer.send"].tap()
         let delivered = app.staticTexts["Delivered · waiting for a reply"]
         XCTAssertTrue(delivered.waitForExistence(timeout: 15), "message delivered")
         shot("composer-sent")
@@ -71,7 +71,7 @@ final class SidekickFlows: XCTestCase {
         let field = app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
         field.tap()
         field.typeText(text)
-        app.buttons["Send"].tap()
+        app.buttons["composer.send"].tap()
         sleep(4)
         shot("after-send")
         let bubbles = app.staticTexts.matching(NSPredicate(format: "label == %@", text))
@@ -166,13 +166,89 @@ final class SidekickFlows: XCTestCase {
         let field = app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
         field.tap()
         field.typeText("Attachment test: describe the attached image in one short sentence.")
-        app.buttons["Send"].tap()
+        app.buttons["composer.send"].tap()
         XCTAssertTrue(app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Attachment '")).firstMatch.waitForExistence(timeout: 15), "the sent message shows its attachment")
         let waiting = app.staticTexts["Delivered · waiting for a reply"]
         let deadline = Date().addingTimeInterval(240)
         while waiting.exists && Date() < deadline { sleep(5) }
         XCTAssertFalse(waiting.exists, "the agent replied")
         shot("attach-replied")
+    }
+
+    /// Responsiveness on a thread with a long report: opening it, opening the chat and
+    /// typing must stay fast. Doesn't send anything.
+    func testLongThreadResponsiveness() {
+        func timed(_ label: String, _ work: () -> Void) {
+            let start = Date()
+            work()
+            let s = Date().timeIntervalSince(start)
+            print("TIMING \(label): \(String(format: "%.2f", s))s")
+            XCTAssertLessThan(s, label == "open thread" ? 8 : 4, "\(label) took \(s)s")
+        }
+        openProject("Merch Maker")
+        let row = app.buttons.containing(NSPredicate(format: "label CONTAINS 'Multi-view studio renders'")).firstMatch
+        for _ in 0..<4 where !row.exists { app.swipeUp() }
+        guard row.waitForExistence(timeout: 5) else { return XCTFail("thread t-0042 not listed") }
+        row.tap()
+        timed("open thread") {
+            app.buttons["Open thread"].firstMatch.tap()
+            _ = app.staticTexts["Full report"].waitForExistence(timeout: 30)
+        }
+        timed("open chat") {
+            app.descendants(matching: .any)["Compose"].tap()
+            _ = (app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch).waitForExistence(timeout: 30)
+        }
+        let field = app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
+        timed("type") { field.typeText("responsiveness check, not sent") }
+        timed("close chat") {
+            app.buttons["Close"].tap()
+            _ = app.descendants(matching: .any)["Compose"].waitForExistence(timeout: 30)
+        }
+    }
+
+    /// The same steps on a light page, as a baseline for the test's own overhead.
+    func testLightThreadBaseline() {
+        func timed(_ label: String, _ work: () -> Void) {
+            let start = Date(); work()
+            print("TIMING baseline \(label): \(String(format: "%.2f", Date().timeIntervalSince(start)))s")
+        }
+        openProject("Trial")
+        app.swipeUp()
+        app.buttons.containing(NSPredicate(format: "label CONTAINS 'Sidekick smoke-test thread'")).firstMatch.tap()
+        timed("open thread") {
+            app.buttons["Open thread"].firstMatch.tap()
+            _ = app.staticTexts["Full report"].waitForExistence(timeout: 30)
+        }
+        timed("open chat") {
+            app.descendants(matching: .any)["Compose"].tap()
+            _ = (app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch).waitForExistence(timeout: 30)
+        }
+        let field = app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
+        timed("type") { field.typeText("responsiveness check, not sent") }
+        timed("close chat") {
+            app.buttons["Close"].tap()
+            _ = app.descendants(matching: .any)["Compose"].waitForExistence(timeout: 30)
+        }
+    }
+
+    /// Return sends a chat message, and submits a question's typed answer.
+    func testReturnSubmits() {
+        openProject("Trial")
+        app.descendants(matching: .any)["Compose"].tap()
+        let field = app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
+        XCTAssertTrue(field.waitForExistence(timeout: 10))
+        field.tap()
+        let text = "Return test \(Int(Date().timeIntervalSince1970)): reply with just ok."
+        field.typeText(text + "\n")
+        XCTAssertTrue(app.staticTexts[text].waitForExistence(timeout: 10), "Return sent the message")
+        XCTAssertEqual((field.value as? String).map { $0.hasPrefix("Return test") }, false, "the input cleared")
+        app.buttons["Close"].tap()
+
+        openInbox("Return question")
+        let other = app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
+        other.tap()
+        other.typeText("Purple\n")
+        XCTAssertTrue(app.staticTexts["Inbox"].waitForExistence(timeout: 10), "Return submitted the answer and went back")
     }
 
     func testComposerHoldToTalk() {
@@ -205,7 +281,7 @@ final class SidekickFlows: XCTestCase {
         let field = app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
         field.tap()
         field.typeText("Which haiku did you write? Paste it here.")
-        app.buttons["Send"].tap()
+        app.buttons["composer.send"].tap()
         let delivered = app.staticTexts["Delivered · waiting for a reply"]
         XCTAssertTrue(delivered.waitForExistence(timeout: 15), "message delivered to thread")
         let deadline = Date().addingTimeInterval(240)

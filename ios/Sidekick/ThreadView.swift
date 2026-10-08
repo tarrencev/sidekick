@@ -5,6 +5,7 @@ struct ThreadView: View {
     @Environment(AppModel.self) private var model
     let slug: String
     let tid: String
+    @State private var showFullReport = false
 
     private var detail: ThreadDetail? { model.threads["\(slug)/\(tid)"] }
 
@@ -62,7 +63,15 @@ struct ThreadView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             SectionTitle("Full report")
                             Hairline()
-                            MarkdownView(text: report)
+                            // Long reports start collapsed: they can run to tens of kilobytes.
+                            let preview = 6
+                            MarkdownView(text: report, limit: showFullReport ? nil : preview)
+                            if !showFullReport, MarkdownView.blockCount(report) > preview {
+                                Button("Show the full report") { showFullReport = true }
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(Theme.accent)
+                                    .buttonStyle(.plain)
+                            }
                         }
                     }
                 }

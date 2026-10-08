@@ -70,7 +70,8 @@ struct QuestionView: View {
                         if !options.isEmpty {
                             Text("Other").font(.system(size: 15)).foregroundStyle(Theme.text)
                         }
-                        InputBox(placeholder: options.isEmpty ? "Your answer" : "Share your thoughts…", text: binding(for: q), minLines: 1)
+                        InputBox(placeholder: options.isEmpty ? "Your answer" : "Share your thoughts…", text: binding(for: q), minLines: 1,
+                                 onSubmit: { if complete && !sending { send() } })
                     }
                     .padding(.top, 14)
                 } else if let answer = item.answers?[q.question] {

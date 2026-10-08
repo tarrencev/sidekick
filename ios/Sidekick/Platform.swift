@@ -20,8 +20,9 @@ extension View {
         #endif
     }
 
-    /// On the Mac, Return sends and Shift-Return starts a new line (as in Messages and
-    /// Slack). iOS keeps the keyboard's own Return key and the send button.
+    /// Return submits: it sends a message, a review's feedback or an answer. On the Mac,
+    /// Shift-Return (or Option-Return) starts a new line, as in Messages and Slack. On
+    /// iPhone the keyboard's Return key reads "send" and sends.
     @ViewBuilder func sendsOnReturn(_ text: Binding<String>, send: @escaping () -> Void) -> some View {
         #if os(macOS)
         onKeyPress(keys: [.return], phases: .down) { press in
@@ -34,6 +35,14 @@ extension View {
         }
         #else
         self
+            .submitLabel(.send)
+            // A multi-line field inserts a newline instead of submitting: treat a typed
+            // Return (one new trailing newline) as send.
+            .onChange(of: text.wrappedValue) { old, new in
+                guard new.count == old.count + 1, new.hasSuffix("\n") else { return }
+                text.wrappedValue = String(new.dropLast())
+                send()
+            }
         #endif
     }
 

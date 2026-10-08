@@ -248,6 +248,7 @@ private struct ComposerPanel: View {
                     .buttonStyle(.plain)
                     .disabled(!canSend)
                     .accessibilityLabel("Send")
+                    .accessibilityIdentifier("composer.send")
                 }
                 .padding(.leading, 6)
                 .padding(.trailing, 8)

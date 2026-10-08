@@ -62,7 +62,8 @@ final class AppModel {
     func refreshThread(_ slug: String, _ tid: String) async {
         guard let api else { return }
         do {
-            threads["\(slug)/\(tid)"] = try await api.thread(slug, tid)
+            let fresh = try await api.thread(slug, tid)
+            if threads["\(slug)/\(tid)"] != fresh { threads["\(slug)/\(tid)"] = fresh }
         } catch {
             lastError = error.localizedDescription
         }
@@ -84,7 +85,7 @@ final class AppModel {
     func refreshInbox() async {
         guard let api else { return }
         if let items = try? await api.inbox() {
-            inbox = items
+            if inbox != items { inbox = items }
             updateBadge()
         }
     }
@@ -96,7 +97,8 @@ final class AppModel {
     func refresh() async {
         guard let api else { return }
         do {
-            projects = try await api.projects()
+            let fresh = try await api.projects()
+            if projects != fresh { projects = fresh }
             lastError = nil
         } catch {
             lastError = error.localizedDescription
@@ -107,7 +109,7 @@ final class AppModel {
         guard let api else { return }
         do {
             let detail = try await api.project(slug)
-            details[slug] = detail
+            if details[slug] != detail { details[slug] = detail }
             notifyNew(in: detail)
         } catch {
             lastError = error.localizedDescription
@@ -137,7 +139,7 @@ final class AppModel {
     func refreshMessages(_ target: ComposerTarget) async {
         guard let api, let fresh = try? await api.messages(target) else { return }
         let before = messages[target.key] ?? []
-        messages[target.key] = fresh
+        if before != fresh { messages[target.key] = fresh }
         // A reply is new if we last saw its message still waiting.
         let waiting = Set(before.filter(\.isPending).map(\.id))
         let newReplies = fresh.filter { $0.state == "replied" && waiting.contains($0.id) }
@@ -196,19 +198,43 @@ final class AppModel {
                 do {
                     self.connected = true
                     delay = 1
+                    // Events come in bursts (a message, its delivery, a status, a PR
+                    // lookup): collect them for a moment, then reload once per project.
+                    var changed: Set<String> = []
+                    var flush: Task<Void, Never>?
                     for try await slug in api.events() {
-                        await self.refresh()
-                        await self.refresh(slug)
-                        await self.refreshInbox()
-                        for key in self.messages.keys where key == slug || key.hasPrefix(slug + "/") {
-                            let parts = key.split(separator: "/").map(String.init)
-                            await self.refreshMessages(parts.count == 2 ? .thread(parts[0], parts[1]) : .project(parts[0]))
+                        changed.insert(slug)
+                        flush?.cancel()
+                        flush = Task { @MainActor in
+                            try? await Task.sleep(for: .milliseconds(350))
+                            guard !Task.isCancelled else { return }
+                            let slugs = changed
+                            changed = []
+                            await self.reload(slugs)
                         }
                     }
                 } catch {}
                 self.connected = false
                 try? await Task.sleep(nanoseconds: delay * 1_000_000_000)
                 delay = min(delay * 2, 30)
+            }
+        }
+    }
+
+    /// Reloads what changed: the project list, the inbox, and each changed project's
+    /// page, open threads and conversations.
+    private func reload(_ slugs: Set<String>) async {
+        await refresh()
+        await refreshInbox()
+        for slug in slugs where !slug.isEmpty {
+            if details[slug] != nil { await refresh(slug) }
+            for key in threads.keys where key.hasPrefix(slug + "/") {
+                let parts = key.split(separator: "/").map(String.init)
+                if parts.count == 2 { await refreshThread(parts[0], parts[1]) }
+            }
+            for key in messages.keys where key == slug || key.hasPrefix(slug + "/") {
+                let parts = key.split(separator: "/").map(String.init)
+                await refreshMessages(parts.count == 2 ? .thread(parts[0], parts[1]) : .project(parts[0]))
             }
         }
     }

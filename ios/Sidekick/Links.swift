@@ -3,10 +3,24 @@ import SwiftUI
 
 /// Turns agent-written text into tappable text: markdown links work, and bare URLs
 /// become links too. Links open in the browser (or the GitHub app for github.com).
+@MainActor
 enum Links {
     private static let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
 
+    /// Rendering is memoized: views redraw often (every live update), and link
+    /// detection over a long report on every redraw froze the app.
+    private static var memo: [String: AttributedString] = [:]
+
     static func attributed(_ text: String, markdown: Bool = true) -> AttributedString {
+        let key = markdown ? text : "\u{0}" + text
+        if let hit = memo[key] { return hit }
+        let out = render(text, markdown: markdown)
+        if memo.count > 400 { memo.removeAll(keepingCapacity: true) }
+        memo[key] = out
+        return out
+    }
+
+    private static func render(_ text: String, markdown: Bool) -> AttributedString {
         var out = (markdown
             ? try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))
             : nil) ?? AttributedString(text)

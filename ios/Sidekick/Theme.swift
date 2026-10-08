@@ -71,6 +71,8 @@ struct InputBox: View {
     let placeholder: String
     @Binding var text: String
     var minLines = 3
+    /// What Return does; nil keeps Return as a newline.
+    var onSubmit: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -82,6 +84,7 @@ struct InputBox: View {
                     .tint(Theme.accent)
                     .padding(.vertical, 14)
                     .padding(.leading, 14)
+                    .modifier(SubmitOnReturn(text: $text, onSubmit: onSubmit))
                 MicButton(text: $text)
                     .padding(.top, 8)
                     .padding(.trailing, 8)
@@ -183,6 +186,19 @@ struct PRLook {
         case (_, "pending"): (color, icon, detail) = (Self.running, "clock", "CI running")
         case (_, "passing"): (color, icon, detail) = (Self.passing, "checkmark.circle", "CI green")
         default: (color, icon, detail) = (Theme.accent, "arrow.triangle.pull", "open")
+        }
+    }
+}
+
+private struct SubmitOnReturn: ViewModifier {
+    @Binding var text: String
+    let onSubmit: (() -> Void)?
+
+    func body(content: Content) -> some View {
+        if let onSubmit {
+            content.sendsOnReturn($text, send: onSubmit)
+        } else {
+            content
         }
     }
 }

@@ -5,10 +5,14 @@ import SwiftUI
 /// inside each block. Links open through openURL, so GitHub links reach the app.
 struct MarkdownView: View {
     let text: String
+    /// Show only the first blocks (e.g. a collapsed report).
+    var limit: Int?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ForEach(Array(Self.blocks(text).enumerated()), id: \.offset) { _, block in
+        let all = Self.parsed(text)
+        let shown = limit.map { Array(all.prefix($0)) } ?? all
+        LazyVStack(alignment: .leading, spacing: 12) {
+            ForEach(Array(shown.enumerated()), id: \.offset) { _, block in
                 view(for: block)
             }
         }
@@ -66,6 +70,20 @@ struct MarkdownView: View {
 
     private func inline(_ s: String) -> AttributedString {
         Links.attributed(s) // markdown links plus bare URLs
+    }
+
+    /// Number of blocks in `text`, for "show more" decisions.
+    static func blockCount(_ text: String) -> Int { parsed(text).count }
+
+    private static var memo: [String: [Block]] = [:]
+
+    /// Parses once per distinct text: reports can be tens of kilobytes and views redraw often.
+    static func parsed(_ text: String) -> [Block] {
+        if let hit = memo[text] { return hit }
+        let out = blocks(text)
+        if memo.count > 200 { memo.removeAll(keepingCapacity: true) }
+        memo[text] = out
+        return out
     }
 
     static func blocks(_ text: String) -> [Block] {

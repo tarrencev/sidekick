@@ -11,7 +11,7 @@ struct ProjectSummary: Codable, Identifiable, Hashable {
     var id: String { slug }
 }
 
-struct ProjectDetail: Codable {
+struct ProjectDetail: Codable, Equatable {
     let slug: String
     let name: String
     let goal: String?
@@ -97,7 +97,7 @@ struct Thread: Codable, Identifiable, Hashable {
     let link: String?
 }
 
-struct ThreadDetail: Codable {
+struct ThreadDetail: Codable, Equatable {
     let id: String
     let title: String
     let group: String
