@@ -34,7 +34,7 @@ interrupt you.
 | <img src="docs/screenshots/inbox.png" alt="Inbox" width="240"> | **One inbox.** Questions, reviews, proposed threads and unread replies, across every project. Swipe right to approve, left to reject. Push notifications on iPhone and Mac. |
 | <img src="docs/screenshots/question.png" alt="Question" width="240"> | **Decisions, framed.** The agent explains the trade-off and puts its recommendation first. Links in questions open in the browser. |
 | <img src="docs/screenshots/review.png" alt="Review" width="240"> | **Reviews you understand cold.** Agents must publish one HTML page that explains itself and embeds its images; Sidekick refuses folders of files or bare screenshots. |
-| <img src="docs/screenshots/chat.png" alt="Chat" width="240"> | **Talk to any agent.** Message a project's coordinator or any thread from wherever you are; the reply comes back to the app. Hold the + to dictate. |
+| <img src="docs/screenshots/chat.png" alt="Chat" width="240"> | **Talk to any agent.** Message a project's coordinator or any thread from wherever you are; the reply comes back to the app. Hold the + to dictate, and attach photos, screenshots or files (on the Mac, drag them in or paste). |
 | <img src="docs/screenshots/thread.png" alt="Thread" width="240"> | **Drop into a thread.** Its summary, PR, artifacts, files it produced and its full report. |
 
 **Voice, on device.** Hold the + (or any mic) to talk. Speech is transcribed locally with

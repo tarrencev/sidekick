@@ -9,6 +9,9 @@ final class SidekickFlows: XCTestCase {
         continueAfterFailure = true
         app = XCUIApplication()
         // Set TEST_RUNNER_SK_DICTATION_AUDIO=<wav> for xcodebuild to feed hold-to-talk a clip.
+        if let file = ProcessInfo.processInfo.environment["SK_ATTACH_FILE"], name.contains("Attachment") {
+            app.launchArguments += ["-debugAttach", file]
+        }
         if let clip = ProcessInfo.processInfo.environment["SK_DICTATION_AUDIO"],
            FileManager.default.fileExists(atPath: clip), name.contains("Hold") {
             app.launchArguments += ["-debugDictationAudio", clip]
@@ -150,6 +153,26 @@ final class SidekickFlows: XCTestCase {
             shot("swipe-row-opened")
             XCTAssertTrue(app.navigationBars.buttons.firstMatch.exists, "tapping a row opens it")
         }
+    }
+
+    /// A picture sent from the chat reaches the agent, which can open and describe it.
+    func testSendAttachment() {
+        openProject("Trial")
+        app.descendants(matching: .any)["Compose"].tap()
+        let remove = app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Remove'")).firstMatch
+        XCTAssertTrue(remove.waitForExistence(timeout: 10), "the file is in the tray")
+        sleep(3) // upload
+        shot("attach-tray")
+        let field = app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
+        field.tap()
+        field.typeText("Attachment test: describe the attached image in one short sentence.")
+        app.buttons["Send"].tap()
+        XCTAssertTrue(app.buttons.containing(NSPredicate(format: "label BEGINSWITH 'Attachment '")).firstMatch.waitForExistence(timeout: 15), "the sent message shows its attachment")
+        let waiting = app.staticTexts["Delivered · waiting for a reply"]
+        let deadline = Date().addingTimeInterval(240)
+        while waiting.exists && Date() < deadline { sleep(5) }
+        XCTAssertFalse(waiting.exists, "the agent replied")
+        shot("attach-replied")
     }
 
     func testComposerHoldToTalk() {

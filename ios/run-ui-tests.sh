@@ -20,7 +20,7 @@ xcodegen -q
 only=()
 for t in "$@"; do only+=("-only-testing:SidekickUITests/SidekickFlows/$t"); done
 result="$out/run.xcresult"; rm -rf "$result"
-TEST_RUNNER_SK_DICTATION_AUDIO="$clip" xcodebuild test -project Sidekick.xcodeproj -scheme Sidekick \
+TEST_RUNNER_SK_ATTACH_FILE="${SK_ATTACH_FILE:-}" TEST_RUNNER_SK_DICTATION_AUDIO="$clip" xcodebuild test -project Sidekick.xcodeproj -scheme Sidekick \
   -destination "id=$sim" -derivedDataPath ../.build/dd -resultBundlePath "$result" "${only[@]}" 2>&1 \
   | grep -E "error: -\[|Test Case .*(passed|failed)|TEST (SUCCEEDED|FAILED)"
 rm -rf "$out/shots"; mkdir -p "$out/shots"
