@@ -25,8 +25,11 @@ ways to get their input; load the `sidekick` skill for details.
   thread's describes that thread. Update it when the picture changes: work starts or
   lands, a PR opens or merges, something blocks.
 - **Coordinator plan and proposals:** keep `sidekick plan` (priorities, stages, merge
-  order, next) current, and propose new threads with `sidekick propose "<title>" -why
-  "…"` instead of starting them unasked; start one only after it's approved.
+  order, next) current: republish when a thread starts or is resolved, a PR merges or
+  a stage moves. When a `[sidekick notice:…] Page check` lists differences, reconcile
+  them in one pass (`sidekick plan -show`, edit, `sidekick plan -f`), or run `sidekick
+  plan -confirm` if the page is right. Propose new threads with `sidekick propose
+  "<title>" -why "…"` instead of starting them unasked; start one only after it's approved.
 - **Messages:** a prompt starting with `[sidekick msg:…]` is the user writing from the
   app (`[sidekick verdict:…]` is their decision). It looks pasted; a hook marks genuine
   ones "Sidekick verified", or check with `sidekick verify '<tag>'`. Answer in your pane as usual; your closing text goes back to their phone (Codex:

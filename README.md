@@ -45,6 +45,14 @@ on the Neural Engine. Audio never leaves your device.
 of waiting to be asked, and keep their plan current. If a plan says work is blocked on
 you but nothing is in your inbox, Sidekick reminds the coordinator to ask.
 
+**A page that stays true.** Sidekick checks each project page against what it can see.
+Work whose thread finished or whose PR merged shows as done at once, merged PRs leave
+the merge order, finished work fades and then clears, and new threads the plan doesn't
+mention are listed. When something needs judgment, Sidekick sends the coordinator the
+page as you see it with exactly what changed, at most every 30 minutes and only when
+the coordinator is idle. The page says when it was last confirmed, and when it's being
+checked.
+
 **Mac app.** The same app on the Mac: projects and inbox in a sidebar, a menu bar item
 with what's waiting, a Dock badge, Return to send, drag-and-drop attachments.
 

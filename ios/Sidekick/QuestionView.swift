@@ -74,7 +74,8 @@ struct QuestionView: View {
                 if item.isPending {
                     VStack(alignment: .leading, spacing: 8) {
                         if !options.isEmpty {
-                            Text("Other").font(.ui(size: 15)).foregroundStyle(Theme.text)
+                            Text(picks[q.question]?.isEmpty == false ? "Add a note" : "Or answer in your own words")
+                                .font(.ui(size: 15)).foregroundStyle(Theme.text)
                         }
                         InputBox(placeholder: options.isEmpty ? "Your answer" : "Share your thoughts…", text: binding(for: q), minLines: 1,
                                  onSubmit: { if complete && !sending { send() } })
@@ -104,27 +105,27 @@ struct QuestionView: View {
             if set.contains(label) { set.remove(label) } else { set.insert(label) }
         } else {
             set = set.contains(label) ? [] : [label]
-            other[q.question] = ""
         }
         picks[q.question] = set
     }
 
+    /// What's typed is kept alongside a picked option: it's a note on the choice,
+    /// or the answer itself when nothing is picked. Neither ever clears the other.
     private func binding(for q: Question) -> Binding<String> {
-        Binding {
-            other[q.question] ?? ""
-        } set: { text in
-            other[q.question] = text
-            if q.multiSelect != true, !text.isEmpty { picks[q.question] = [] }
-        }
+        Binding { other[q.question] ?? "" } set: { other[q.question] = $0 }
     }
 
-    /// Picked labels in option order, plus any typed text.
+    /// Picked labels in option order, with any typed note.
     private func answer(for q: Question) -> String? {
         let set = picks[q.question] ?? []
-        var parts = (q.options ?? []).map(\.label).filter(set.contains)
+        let labels = (q.options ?? []).map(\.label).filter(set.contains).joined(separator: ", ")
         let typed = (other[q.question] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        if !typed.isEmpty { parts.append(typed) }
-        return parts.isEmpty ? nil : parts.joined(separator: ", ")
+        switch (labels.isEmpty, typed.isEmpty) {
+        case (true, true): return nil
+        case (false, true): return labels
+        case (true, false): return typed
+        case (false, false): return "\(labels). Note from the user: \(typed)"
+        }
     }
 
     private var complete: Bool { questions.allSatisfy { answer(for: $0) != nil } }

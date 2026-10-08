@@ -4,12 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"path/filepath"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -22,6 +20,20 @@ type Plan struct {
 	MergeOrder []PlanMerge `json:"mergeOrder,omitempty"`
 	Next       []PlanNext  `json:"next,omitempty"`
 	Updated    time.Time   `json:"updated"`
+
+	// Filled in by the daemon for the app (see reconcile.go); dropped when an
+	// agent publishes a plan.
+	Unplanned []PlanThread `json:"unplanned,omitempty"` // open threads the plan doesn't mention
+	Checked   time.Time    `json:"checked,omitzero"`    // last updated or confirmed by the coordinator
+	Checking  bool         `json:"checking,omitempty"`  // Sidekick asked the coordinator to reconcile
+	Stale     bool         `json:"stale,omitempty"`     // it differs from what Sidekick observes
+}
+
+// PlanThread is an open thread the plan doesn't cover.
+type PlanThread struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	Group string `json:"group,omitempty"`
 }
 
 type PlanWork struct {
@@ -36,6 +48,10 @@ type PlanWork struct {
 	// Ask is filled in by the daemon: the pending inbox item that unblocks this
 	// work, when it waits on the user.
 	Ask string `json:"ask,omitempty"`
+	// Auto says what Sidekick corrected from what it observed ("thread resolved",
+	// "PR merged"), and Faded marks done work that is about to drop off the page.
+	Auto  string `json:"auto,omitempty"`
+	Faded bool   `json:"faded,omitempty"`
 }
 
 var mentionsUser = regexp.MustCompile(`(?i)\b(you|your|user)\b`)
@@ -130,10 +146,11 @@ func (s *Server) setPlan(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "only the project coordinator sets the plan", http.StatusForbidden)
 		return
 	}
-	if err := s.store.SetPlan(project, body.Plan); err != nil {
+	if err := s.store.SetPlan(project, body.Plan.authored()); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	s.reconciled(project, false)
 	writeJSONResponse(w, map[string]string{"project": project})
 }
 
@@ -167,67 +184,15 @@ func (s *Server) propose(w http.ResponseWriter, r *http.Request) {
 	writeJSONResponse(w, it)
 }
 
-// withAsks links each piece of work that waits on the user to the pending inbox
-// item that would unblock it: one from the same thread, or from the coordinator.
-func (s *Server) withAsks(project string, plan *Plan) *Plan {
-	if plan == nil {
-		return nil
+// authored strips what the daemon fills in, so a plan an agent copied from
+// `sidekick plan -show` is stored as the agent's own.
+func (p Plan) authored() Plan {
+	p.Unplanned, p.Checked, p.Checking, p.Stale = nil, time.Time{}, false, false
+	p.Work = append([]PlanWork(nil), p.Work...)
+	for i := range p.Work {
+		p.Work[i].Ask, p.Work[i].Auto, p.Work[i].Faded = "", "", false
 	}
-	out := *plan
-	out.Work = append([]PlanWork(nil), plan.Work...)
-	pending := map[string]string{} // thread ("" = coordinator) -> oldest pending item
-	for _, it := range s.store.Items(project) {
-		if it.State == StatePending && (it.Kind == "question" || it.Kind == "review" || it.Kind == "proposal") {
-			pending[it.Thread] = it.ID // Items is newest first, so the oldest wins
-		}
-	}
-	for i, w := range out.Work {
-		if !w.waitsOnUser() {
-			continue
-		}
-		if id, ok := pending[w.Thread]; ok {
-			out.Work[i].Ask = id
-		} else if id, ok := pending[""]; ok && w.Thread != "" {
-			out.Work[i].Ask = id
-		}
-	}
-	return &out
-}
-
-// watchBlocked reminds a coordinator when its plan says work is waiting on the
-// user but the user has nothing from it in their inbox: they can't unblock what
-// they can't see.
-func (s *Server) watchBlocked() {
-	nudged := map[string]bool{}
-	var mu sync.Mutex
-	for {
-		time.Sleep(2 * time.Minute)
-		for _, pr := range s.projects.List() {
-			plan := s.withAsks(pr.Slug, s.store.Plan(pr.Slug))
-			if plan == nil || !pr.Active || time.Since(plan.Updated) < 10*time.Minute {
-				continue
-			}
-			var stuck []string
-			for _, w := range plan.Work {
-				if w.waitsOnUser() && w.Ask == "" {
-					stuck = append(stuck, w.Title)
-				}
-			}
-			key := pr.Slug + "|" + plan.Updated.String() + "|" + strings.Join(stuck, "|")
-			mu.Lock()
-			seen := nudged[key]
-			nudged[key] = true
-			mu.Unlock()
-			if len(stuck) == 0 || seen {
-				continue
-			}
-			if err := s.notice(pr.Slug, fmt.Sprintf(
-				"Your plan says this is blocked waiting on the user: %q. But the user has nothing from you in their Sidekick inbox, so they can't unblock it. Ask now: AskUserQuestion for decisions (up to 4 questions in one call, recommended option first; never leave decisions inside a review page), `sidekick review` for something to look at, or `sidekick propose` for new work. If it isn't actually waiting on the user, republish the plan with the right \"waitingOn\".",
-				strings.Join(stuck, `", "`))); err != nil {
-				log.Printf("sidekick: blocked reminder for %s: %v", pr.Slug, err)
-			}
-		}
-	}
+	return p
 }
 
 // notice sends the coordinator a message from Sidekick itself, tagged so the

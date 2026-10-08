@@ -81,6 +81,23 @@ final class QAFlows: XCTestCase {
         XCTAssertTrue(app.buttons["Show the full report"].waitForExistence(timeout: 5) || text("three sizes").exists, "Open thread opens it")
     }
 
+    /// What Sidekick observes is applied to the plan: work pointing at a thread that
+    /// doesn't exist is flagged, unlisted open threads are shown, and the page says
+    /// it may be out of date.
+    func testPlanFreshness() {
+        Demo.request(Demo.agent.appending(path: "v1/plan"), "POST", ["origin": Demo.origin("w9:p1"), "plan": [
+            "focus": "Offline sync for the inspection pilot",
+            "work": [["title": "Photo uploads", "stage": "building", "thread": "t-0099"]],
+        ]])
+        openProject("Field App")
+        XCTAssertTrue(text("Sidekick: thread not found").waitForExistence(timeout: 10), "a missing thread is flagged")
+        if !text("Not in the plan").exists { app.swipeUp() }
+        XCTAssertTrue(text("Not in the plan").waitForExistence(timeout: 5), "unlisted open threads are shown")
+        XCTAssertTrue(text("Offline sync").exists)
+        XCTAssertTrue(app.descendants(matching: .any)["plan.freshness"].label.contains("May be out of date"), "the page says it may be stale")
+        shot("qa-plan-freshness")
+    }
+
     func testThreadPage() {
         openProject("Acme Storefront")
         // A plan row with a thread opens that thread.
@@ -150,6 +167,19 @@ final class QAFlows: XCTestCase {
         input.tap()
         input.typeText("Sale ends Sunday\n")
         XCTAssertTrue(app.staticTexts["Inbox"].waitForExistence(timeout: 10), "Return submits a typed answer")
+    }
+
+    /// A note typed after picking an option goes with it; picking after typing keeps the note.
+    func testQuestionOptionWithNote() {
+        let q = unique("QA: ship the spring banner?")
+        let id = Demo.ask(pane: "w1:p1", q, options: ["Ship it", "Hold"])
+        openInbox("ship the spring banner")
+        input.tap()
+        input.typeText("Use the warmer photo")
+        button("Ship it").tap()
+        app.buttons["Submit answer"].tap()
+        XCTAssertTrue(app.staticTexts["Inbox"].waitForExistence(timeout: 10))
+        XCTAssertEqual((Demo.item(id)?["answers"] as? [String: String])?[q], "Ship it. Note from the user: Use the warmer photo")
     }
 
     // MARK: Reviews and proposals

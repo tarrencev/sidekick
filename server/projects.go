@@ -285,3 +285,36 @@ func firstQuoted(v string, q byte) string {
 	}
 	return v
 }
+
+// ThreadFact is what Sidekick can observe about any thread, open or resolved.
+type ThreadFact struct {
+	ID, Title, Status, Reason, PR, Group string
+	Launched, Changed                    time.Time
+}
+
+// ThreadFacts returns every thread of a project, including resolved ones, by id.
+func (p *Projects) ThreadFacts(slug string) map[string]ThreadFact {
+	files, _ := filepath.Glob(filepath.Join(p.root, slug, "threads", "*.toml"))
+	out := map[string]ThreadFact{}
+	for _, f := range files {
+		kv := readTOML(f)
+		if kv["id"] == "" {
+			continue
+		}
+		t := ThreadFact{ID: kv["id"], Title: kv["title"], Status: kv["status"], Reason: kv["resolved_reason"],
+			PR: kv["pr"], Group: kv["last_group"]}
+		t.Launched, _ = time.Parse(time.RFC3339, kv["launched_at"])
+		t.Changed, _ = time.Parse(time.RFC3339, kv["last_state_change"])
+		if t.Status == "resolved" {
+			// Resolving rewrites the file; its modification time is when that happened.
+			if fi, err := os.Stat(f); err == nil && fi.ModTime().After(t.Changed) {
+				t.Changed = fi.ModTime()
+			}
+		}
+		if t.Launched.After(t.Changed) {
+			t.Changed = t.Launched
+		}
+		out[t.ID] = t
+	}
+	return out
+}

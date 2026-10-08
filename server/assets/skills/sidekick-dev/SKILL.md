@@ -24,6 +24,16 @@ project and per thread:
   with stages, merge order, next) is shown on the project page; `sidekick propose`
   files a new thread for approval in the inbox, and the decision goes back like a review
   verdict.
+- **Page reconciliation (`server/reconcile.go`):** `reconcile()` compares the plan and
+  headline with herdr-projects thread files, PR status and the inbox. Observable facts
+  are applied to what the app shows (resolved thread or merged PR → done, merged PRs out
+  of the merge order, done work fades after 1 day and drops after 3, unlisted open
+  threads under `unplanned`). Judgment calls become `Drift`s with stable keys;
+  `reconcileLoop` (every 2 min) sends the coordinator one `[sidekick notice:] Page
+  check` when unsettled drift exists, at most every 30 min (backing off if unanswered),
+  waiting up to an hour for the coordinator pane to be idle. Republishing the plan or
+  status settles the drift it was told about; `sidekick plan -confirm` settles all and
+  resets the staleness clock. State: `~/.sidekick/status/<project>.reconcile.json`.
 - **Provenance:** everything Sidekick types into a pane is tagged `[sidekick msg:<id>]`
   or `[sidekick verdict:<id>]`. Agents see it as pasted text and may distrust it, so the
   UserPromptSubmit hook (`sidekick hook claude-prompt`) checks the id with the daemon

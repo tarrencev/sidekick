@@ -30,6 +30,19 @@ struct Plan: Codable, Hashable {
     let mergeOrder: [Merge]?
     let next: [Next]?
     let updated: Date
+    /// Filled in by the daemon: open threads the plan doesn't mention, when the
+    /// coordinator last updated or confirmed it, whether Sidekick has asked it to
+    /// reconcile, and whether it differs from what Sidekick observes.
+    let unplanned: [Unplanned]?
+    let checked: Date?
+    let checking: Bool?
+    let stale: Bool?
+
+    struct Unplanned: Codable, Hashable {
+        let id: String
+        let title: String
+        let group: String?
+    }
 
     struct Work: Codable, Hashable {
         let title: String
@@ -40,6 +53,10 @@ struct Plan: Codable, Hashable {
         let waitingOn: String?
         /// The inbox item that unblocks this work, filled in by the daemon.
         let ask: String?
+        /// What Sidekick corrected from what it observed, e.g. "PR merged".
+        let auto: String?
+        /// Done a while ago; about to leave the page.
+        let faded: Bool?
 
         var waitsOnUser: Bool {
             stage == "blocked" && (ask != nil || waitingOn?.lowercased() == "user")

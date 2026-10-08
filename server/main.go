@@ -138,7 +138,7 @@ func serve(args []string) error {
 	// touch this machine's skills or projects.
 	if filepath.Clean(*root) == home(".herdr-projects") {
 		go keepAgentsBriefed()
-		go srv.watchBlocked()
+		go srv.reconcileLoop()
 	}
 
 	os.Remove(*sock)

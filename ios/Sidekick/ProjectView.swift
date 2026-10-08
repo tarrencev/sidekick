@@ -259,8 +259,47 @@ private struct PlanSection: View {
                     }
                 }
             }
-            Text("Plan updated \(plan.updated.ago)").font(.ui(size: 11)).foregroundStyle(Theme.tertiary)
+            if let unplanned = plan.unplanned, !unplanned.isEmpty {
+                block("Not in the plan") {
+                    ForEach(unplanned, id: \.id) { t in
+                        Hairline()
+                        NavigationLink(value: Route.thread(project: slug, id: t.id)) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(t.title).font(.ui(size: 15)).foregroundStyle(Theme.text.opacity(0.85))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                Text(t.id).font(.ui(size: 11).monospacedDigit()).foregroundStyle(Theme.tertiary)
+                            }
+                            .padding(.vertical, 11)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            freshness
         }
+    }
+
+    /// When the coordinator last stood behind this plan, and whether it still matches.
+    @ViewBuilder private var freshness: some View {
+        let checked = max(plan.checked ?? plan.updated, plan.updated)
+        HStack(spacing: 6) {
+            if plan.checking == true {
+                ProgressView().controlSize(.mini)
+                Text("Checking with the coordinator · updated \(plan.updated.ago)")
+            } else if plan.stale == true {
+                Circle().fill(PRLook.running).frame(width: 6, height: 6)
+                Text("May be out of date · updated \(plan.updated.ago)")
+            } else if checked > plan.updated.addingTimeInterval(60) {
+                Text("Updated \(plan.updated.ago) · confirmed \(checked.ago)")
+            } else {
+                Text("Plan updated \(plan.updated.ago)")
+            }
+        }
+        .font(.ui(size: 11))
+        .foregroundStyle(plan.stale == true && plan.checking != true ? PRLook.running : Theme.tertiary)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("plan.freshness")
     }
 
     private func block<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -292,10 +331,16 @@ private struct WorkRow: View {
                     Text(note).font(.ui(size: 12)).foregroundStyle(Theme.secondary)
                 }
                 if work.stage == "blocked" { blocker }
+                if let auto = work.auto {
+                    Label("Sidekick: \(auto)", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.ui(size: 11))
+                        .foregroundStyle(Theme.tertiary)
+                }
                 if let url = work.pr?.asLink { LinkPill(url: url) }
             }
         }
         .padding(.vertical, 12)
+        .opacity(work.faded == true ? 0.45 : 1)
         .contentShape(Rectangle())
         // Work waiting on the user opens what it's waiting for; otherwise its thread.
         if let ask = work.ask {

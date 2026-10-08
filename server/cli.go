@@ -293,7 +293,43 @@ func isBoolFlag(a string) bool {
 func cmdPlan(args []string) error {
 	fs := flag.NewFlagSet("plan", flag.ExitOnError)
 	file := fs.String("f", "-", "plan JSON file (- for stdin)")
+	show := fs.Bool("show", false, "print the plan as the user sees it (JSON to edit and republish) and what differs from reality")
+	confirm := fs.Bool("confirm", false, "say the page (plan, headline, summary) is right as it stands")
 	fs.Parse(args)
+	switch {
+	case *show:
+		var out struct {
+			Plan  *Plan
+			Drift []Drift
+		}
+		if err := call(context.Background(), "POST", "/v1/plan/show", map[string]any{"origin": currentOrigin("")}, &out); err != nil {
+			return err
+		}
+		if out.Plan != nil {
+			var m map[string]any // the agent's own fields only, ready to edit
+			b, _ := json.Marshal(out.Plan.authored())
+			json.Unmarshal(b, &m)
+			delete(m, "updated")
+			b, _ = json.MarshalIndent(m, "", "  ")
+			fmt.Println(string(b))
+		} else {
+			fmt.Println(`{"focus": "", "work": [], "mergeOrder": [], "next": []}`)
+		}
+		if len(out.Drift) > 0 {
+			fmt.Fprintln(os.Stderr, "\nWhat differs from what Sidekick observes:")
+			for _, d := range out.Drift {
+				fmt.Fprintln(os.Stderr, "- "+d.Text)
+			}
+		}
+		return nil
+	case *confirm:
+		var out map[string]string
+		if err := call(context.Background(), "POST", "/v1/plan/confirm", map[string]any{"origin": currentOrigin("")}, &out); err != nil {
+			return err
+		}
+		fmt.Printf("Confirmed the page for %s is current.\n", out["project"])
+		return nil
+	}
 	var raw []byte
 	var err error
 	if *file == "-" {

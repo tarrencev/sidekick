@@ -27,6 +27,8 @@ type Server struct {
 
 	mu     sync.Mutex
 	leases map[string]int // live agent connections waiting on a question
+
+	recMu sync.Mutex // guards each project's reconcile state (reconcile.go)
 }
 
 // ---- user API (tailnet, behind `tailscale serve`) ----
@@ -107,7 +109,7 @@ func (s *Server) getProject(w http.ResponseWriter, r *http.Request) {
 			d.Items = append(d.Items, it)
 		}
 	}
-	d.Plan = s.withAsks(pr.Slug, s.store.Plan(pr.Slug))
+	d.Plan, _, _ = s.page(pr.Slug)
 	var urls []string
 	if d.Status != nil {
 		urls = append(urls, d.Status.Link)
@@ -380,6 +382,8 @@ func (s *Server) agentMux() *http.ServeMux {
 	m.HandleFunc("POST /v1/status", s.setStatus)
 	m.HandleFunc("POST /v1/whoami", s.whoami)
 	m.HandleFunc("POST /v1/plan", s.setPlan)
+	m.HandleFunc("POST /v1/plan/show", s.showPlan)
+	m.HandleFunc("POST /v1/plan/confirm", s.confirmPlan)
 	m.HandleFunc("POST /v1/verify", s.verify)
 	m.HandleFunc("POST /v1/push-test", s.pushTest)
 	m.HandleFunc("POST /v1/propose", s.propose)
@@ -677,6 +681,8 @@ func (s *Server) setStatus(w http.ResponseWriter, r *http.Request) {
 	key := project
 	if thread != "" {
 		key = threadKey(project, thread)
+	} else {
+		s.reconciled(project, false)
 	}
 	st, _ := s.store.Status(key)
 	writeJSONResponse(w, map[string]any{"project": project, "thread": thread, "status": st})

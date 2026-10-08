@@ -139,6 +139,31 @@ Blocked work needs `"waitingOn"`: `"user"`, or who/what it waits for (`"CI"`,
 question, review or proposal) from that thread or from you; the app links the two. If
 it doesn't, Sidekick reminds you to ask. Ask first, then mark it blocked.
 
+### Keeping the page true
+
+Update the plan the moment the picture changes, not later: a thread starts or is
+resolved, a PR opens or merges, a stage moves, priorities shift. Every open thread
+should appear in the work list (or be resolved). Sidekick also checks on its own:
+
+- Facts it can see are applied for the user straight away: work whose thread was
+  resolved or whose PR merged shows as done ("Sidekick: PR merged"), merged PRs leave
+  the merge order, done work fades after a day and drops off after three, and open
+  threads you haven't listed show under "Not in the plan".
+- When your page has drifted (finished or new threads, merged PRs, answered blockers,
+  or no update for a couple of hours while threads kept moving), it sends a verified
+  `[sidekick notice:…] Page check` listing the differences and the page as the user sees
+  it. Reconcile in one pass, without stopping other work:
+
+```bash
+sidekick plan -show > plan.json    # the page as the user sees it, as JSON to edit
+# fix stages, merge order, new and finished threads, focus
+sidekick plan -f plan.json
+sidekick status "…" -summary "…"   # if the headline or summary changed too
+sidekick plan -confirm             # or, if the page is already right as it stands
+```
+
+Each difference is raised once; after you republish or confirm, it's settled.
+
 Be proactive: when you see work worth doing (a follow-up, a fix you noticed, the next
 step of the plan), propose a thread instead of waiting to be asked, and don't start it
 until it's approved:
