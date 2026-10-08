@@ -50,8 +50,9 @@ struct API {
 
     enum Verdict: String { case approve, changes, reject }
 
-    func review(_ item: Item, _ verdict: Verdict, comment: String) async throws {
-        try await post("api/items/\(item.id)/review", body: ["verdict": verdict.rawValue, "comment": comment])
+    func review(_ item: Item, _ verdict: Verdict, comment: String, attachments: [String] = []) async throws {
+        struct Body: Encodable { let verdict, comment: String; let attachments: [String] }
+        try await post("api/items/\(item.id)/review", body: Body(verdict: verdict.rawValue, comment: comment, attachments: attachments))
     }
 
     func markSeen(_ target: ComposerTarget) async throws {
@@ -64,8 +65,20 @@ struct API {
         return try await get("api/messages", query: query)
     }
 
-    func send(_ target: ComposerTarget, text: String) async throws -> Item {
-        try await postReturning("api/messages", body: ["project": target.project, "thread": target.thread ?? "", "text": text])
+    func send(_ target: ComposerTarget, text: String, attachments: [String] = []) async throws -> Item {
+        struct Body: Encodable { let project, thread, text: String; let attachments: [String] }
+        return try await postReturning("api/messages", body: Body(project: target.project, thread: target.thread ?? "", text: text, attachments: attachments))
+    }
+
+    func upload(project: String, name: String, data: Data) async throws -> Attachment {
+        var url = base.appending(path: "api/uploads")
+        url.append(queryItems: [URLQueryItem(name: "project", value: project), URLQueryItem(name: "name", value: name)])
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 300
+        let (body, resp) = try await URLSession.shared.upload(for: req, from: data)
+        try check(resp, body)
+        return try JSONDecoder.sidekick.decode(Attachment.self, from: body)
     }
 
     /// Yields the slug of each project that changes, until cancelled or disconnected.

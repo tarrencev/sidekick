@@ -119,8 +119,8 @@ final class AppModel {
         await refreshAfterAction(item.project)
     }
 
-    func review(_ item: Item, _ verdict: API.Verdict, comment: String) async throws {
-        try await api?.review(item, verdict, comment: comment)
+    func review(_ item: Item, _ verdict: API.Verdict, comment: String, attachments: [String] = []) async throws {
+        try await api?.review(item, verdict, comment: comment, attachments: attachments)
         await refreshAfterAction(item.project)
     }
 
@@ -147,9 +147,9 @@ final class AppModel {
         }
     }
 
-    func send(_ target: ComposerTarget, _ text: String) async throws {
+    func send(_ target: ComposerTarget, _ text: String, attachments: [String] = []) async throws {
         guard let api else { return }
-        let item = try await api.send(target, text: text)
+        let item = try await api.send(target, text: text, attachments: attachments)
         // The server's change event may already have reloaded the conversation with
         // this message in it; add it only if it isn't there yet.
         if messages[target.key]?.contains(where: { $0.id == item.id }) != true {

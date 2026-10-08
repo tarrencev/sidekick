@@ -55,6 +55,7 @@ func (s *Server) userMux() *http.ServeMux {
 	m.HandleFunc("GET /api/messages", s.listMessages)
 	m.HandleFunc("POST /api/messages", s.postMessage)
 	m.HandleFunc("POST /api/messages/seen", s.markSeen)
+	m.HandleFunc("POST /api/uploads", s.upload)
 	m.HandleFunc("POST /api/devices", s.registerDevice)
 	m.HandleFunc("GET /api/projects/{slug}/threads/{tid}", s.getThread)
 	m.HandleFunc("POST /api/projects/{slug}/prompt", s.prompt)
@@ -128,14 +129,22 @@ func (s *Server) getProject(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) answer(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Answers map[string]string `json:"answers"`
+		Answers     map[string]string `json:"answers"`
+		Attachments []string          `json:"attachments"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body.Answers) == 0 {
 		http.Error(w, "answers required", http.StatusBadRequest)
 		return
 	}
+	pre, _ := s.store.Get(r.PathValue("id"))
+	atts, err := s.resolveAttachments(pre.Project, body.Attachments)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	it, err := s.store.Close(r.PathValue("id"), "question", StateAnswered, func(it *Item) {
 		it.Answers = body.Answers
+		it.Attachments = atts
 	})
 	if !checkClose(w, r, err) {
 		return
@@ -148,8 +157,9 @@ func (s *Server) answer(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) review(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Verdict string `json:"verdict"` // "approve" | "changes" | "reject"
-		Comment string `json:"comment"`
+		Verdict     string   `json:"verdict"` // "approve" | "changes" | "reject"
+		Comment     string   `json:"comment"`
+		Attachments []string `json:"attachments"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "bad body", http.StatusBadRequest)
@@ -160,12 +170,19 @@ func (s *Server) review(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `verdict must be "approve", "changes" or "reject"`, http.StatusBadRequest)
 		return
 	}
-	if state == StateChanges && strings.TrimSpace(body.Comment) == "" {
+	if state == StateChanges && strings.TrimSpace(body.Comment) == "" && len(body.Attachments) == 0 {
 		http.Error(w, "say what should change", http.StatusBadRequest)
+		return
+	}
+	pre, _ := s.store.Get(r.PathValue("id"))
+	atts, err := s.resolveAttachments(pre.Project, body.Attachments)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	it, err := s.store.Close(r.PathValue("id"), "review|proposal", state, func(it *Item) {
 		it.Comment = strings.TrimSpace(body.Comment)
+		it.Attachments = atts
 	})
 	if !checkClose(w, r, err) {
 		return

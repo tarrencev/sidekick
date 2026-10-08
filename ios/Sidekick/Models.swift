@@ -158,6 +158,7 @@ struct Item: Codable, Identifiable, Hashable {
     let reply: String?
     let error: String?
     let seen: Bool?
+    let attachments: [Attachment]?
 
     enum Kind: String, Codable { case question, review, message, proposal }
 

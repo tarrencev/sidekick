@@ -41,7 +41,10 @@ type Item struct {
 	Text  string `json:"text,omitempty"`
 	Reply string `json:"reply,omitempty"`
 	Seen  bool   `json:"seen,omitempty"` // the user has read the reply
-	Error string `json:"error,omitempty"`
+
+	// Files the user sent with a message, a review verdict or an answer.
+	Attachments []Attachment `json:"attachments,omitempty"`
+	Error       string       `json:"error,omitempty"`
 }
 
 const (

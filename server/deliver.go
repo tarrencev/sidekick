@@ -117,8 +117,13 @@ func verdictMessage(it Item) string {
 			fmt.Fprintf(&b, " Their reason: %s", it.Comment)
 		}
 	default:
-		fmt.Fprintf(&b, "the user requested changes: %s", it.Comment)
+		comment := it.Comment
+		if comment == "" {
+			comment = "see the attached files"
+		}
+		fmt.Fprintf(&b, "the user requested changes: %s", comment)
 	}
+	b.WriteString(attachmentNote(it.Attachments))
 	return b.String()
 }
 
@@ -146,6 +151,7 @@ func proposalMessage(it Item) string {
 	default:
 		fmt.Fprintf(&b, "the user wants changes before it starts: %s. Revise it and propose it again.", it.Comment)
 	}
+	b.WriteString(attachmentNote(it.Attachments))
 	return b.String()
 }
 
@@ -160,5 +166,6 @@ func answerMessage(it Item) string {
 	for _, q := range it.Questions {
 		fmt.Fprintf(&b, "\nQ: %s\nA: %s\n", q.Question, it.Answers[q.Question])
 	}
+	b.WriteString(attachmentNote(it.Attachments))
 	return b.String()
 }

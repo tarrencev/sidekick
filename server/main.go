@@ -150,6 +150,7 @@ func serve(args []string) error {
 	go func() {
 		files := http.FileServer(http.Dir(filepath.Join(*data, "artifacts")))
 		lib := srv.libraryHandler()
+		uploads := srv.uploadsHandler()
 		errc <- http.ListenAndServe(*artListen, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Cache-Control", "no-cache")
 			switch strings.ToLower(filepath.Ext(r.URL.Path)) {
@@ -159,6 +160,10 @@ func serve(args []string) error {
 			}
 			if strings.HasPrefix(r.URL.Path, "/lib/") {
 				lib.ServeHTTP(w, r)
+				return
+			}
+			if strings.HasPrefix(r.URL.Path, "/uploads/") {
+				uploads.ServeHTTP(w, r)
 				return
 			}
 			files.ServeHTTP(w, r)

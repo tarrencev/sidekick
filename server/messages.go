@@ -18,9 +18,9 @@ import (
 // messageMarker tags a delivered message so its reply can be found in a transcript.
 func messageMarker(id string) string { return "[sidekick msg:" + id + "]" }
 
-func (s *Server) sendMessage(project, thread, text string) (Item, error) {
+func (s *Server) sendMessage(project, thread, text string, attachmentIDs ...string) (Item, error) {
 	text = strings.TrimSpace(text)
-	if text == "" {
+	if text == "" && len(attachmentIDs) == 0 {
 		return Item{}, errors.New("text required")
 	}
 	if _, ok := s.projects.Get(project); !ok {
@@ -29,13 +29,17 @@ func (s *Server) sendMessage(project, thread, text string) (Item, error) {
 	if thread != "" && !s.hasThread(project, thread) {
 		return Item{}, fmt.Errorf("no open thread %s in %s", thread, project)
 	}
-	it := &Item{ID: newID(), Project: project, Thread: thread, Kind: "message", Text: text}
+	atts, err := s.resolveAttachments(project, attachmentIDs)
+	if err != nil {
+		return Item{}, err
+	}
+	it := &Item{ID: newID(), Project: project, Thread: thread, Kind: "message", Text: text, Attachments: atts}
 	if err := s.store.Add(it); err != nil {
 		return Item{}, err
 	}
 	prompt := fmt.Sprintf("%s The user wrote this from the Sidekick app on their phone. Answer in this pane as you normally would; your reply is relayed to them. "+
 		"If your answer proposes new work (a thread to start), don't just offer it in prose: file it with `sidekick propose` so it lands in their inbox to approve.\n\n%s",
-		messageMarker(it.ID), text)
+		messageMarker(it.ID), text) + attachmentNote(atts)
 	if err := s.deliver.Prompt(project, thread, prompt); err != nil {
 		who := "The coordinator"
 		if thread != "" {
@@ -78,15 +82,16 @@ func (s *Server) listMessages(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) postMessage(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		Project string `json:"project"`
-		Thread  string `json:"thread"`
-		Text    string `json:"text"`
+		Project     string   `json:"project"`
+		Thread      string   `json:"thread"`
+		Text        string   `json:"text"`
+		Attachments []string `json:"attachments"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "bad body", http.StatusBadRequest)
 		return
 	}
-	it, err := s.sendMessage(body.Project, body.Thread, body.Text)
+	it, err := s.sendMessage(body.Project, body.Thread, body.Text, body.Attachments...)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusConflict)
 		return

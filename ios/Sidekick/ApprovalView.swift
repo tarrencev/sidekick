@@ -9,6 +9,7 @@ struct ApprovalView: View {
 
     @State private var refining = false
     @State private var feedback = ""
+    @State private var tray = AttachmentTray(project: "")
     @State private var confirmReject = false
     @State private var showSummary = false
     @State private var sending = false
@@ -72,6 +73,7 @@ struct ApprovalView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if item.isPending { decision } else { outcome }
         }
+        .onAppear { tray.project = item.project }
         .confirmationDialog(item.kind == .proposal ? "Decline this thread?" : "Reject this?", isPresented: $confirmReject, titleVisibility: .visible) {
             Button(item.kind == .proposal ? "Decline" : "Reject", role: .destructive) { send(.reject) }
         } message: {
@@ -129,7 +131,9 @@ struct ApprovalView: View {
             .padding(.horizontal, 24)
             if refining {
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .bottom, spacing: 8) {
+                    AttachmentTrayView(tray: tray)
+                    HStack(alignment: .bottom, spacing: 4) {
+                        AttachButton(tray: tray)
                         TextField("", text: $feedback, prompt: Text("What should change?").foregroundStyle(Theme.tertiary), axis: .vertical)
                             .lineLimit(1...6)
                             .font(.system(size: 15))
@@ -150,11 +154,12 @@ struct ApprovalView: View {
                         .disabled(!hasFeedback || sending)
                         .accessibilityLabel("Send changes")
                     }
-                    .padding(.leading, 14)
+                    .padding(.leading, 6)
                     .padding(.trailing, 8)
                     .padding(.vertical, 6)
                     .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Theme.line))
+                    .acceptsAttachments(tray)
                     DictationNote().padding(.leading, 6)
                 }
                 .padding(.horizontal, 16)
@@ -191,7 +196,9 @@ struct ApprovalView: View {
         .overlay(alignment: .top) { Hairline() }
     }
 
-    private var hasFeedback: Bool { !feedback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var hasFeedback: Bool {
+        (!feedback.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !tray.readyIDs.isEmpty) && !tray.isUploading
+    }
 
     private func toggleRefine() {
         withAnimation(.snappy) { refining.toggle() }
@@ -203,7 +210,7 @@ struct ApprovalView: View {
         error = nil
         Task {
             do {
-                try await model.review(item, verdict, comment: feedback.trimmingCharacters(in: .whitespacesAndNewlines))
+                try await model.review(item, verdict, comment: feedback.trimmingCharacters(in: .whitespacesAndNewlines), attachments: tray.readyIDs)
                 dismiss()
             } catch {
                 self.error = error.localizedDescription

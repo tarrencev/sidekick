@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 /// A round button that does two things: tap, or press and hold to talk.
 /// Holding records with on-device Parakeet; releasing delivers the transcript.
@@ -178,6 +179,7 @@ private struct ComposerPanel: View {
     @State private var sending = false
     @State private var error: String?
     @State private var contentHeight: CGFloat = 0
+    @State private var tray = AttachmentTray(project: "")
     @FocusState private var focused: Bool
 
     private var conversation: [Item] { model.messages[target.key] ?? [] }
@@ -223,7 +225,9 @@ private struct ComposerPanel: View {
                 if let error {
                     Text(error).font(.system(size: 12)).foregroundStyle(Theme.accent)
                 }
-                HStack(alignment: .bottom, spacing: 8) {
+                AttachmentTrayView(tray: tray)
+                HStack(alignment: .bottom, spacing: 4) {
+                    AttachButton(tray: tray)
                     TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Theme.tertiary), axis: .vertical)
                         .lineLimit(1...10)
                         .font(.system(size: 15))
@@ -245,11 +249,12 @@ private struct ComposerPanel: View {
                     .disabled(!canSend)
                     .accessibilityLabel("Send")
                 }
-                .padding(.leading, 16)
+                .padding(.leading, 6)
                 .padding(.trailing, 8)
                 .padding(.vertical, 6)
                 .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Theme.line))
+                .acceptsAttachments(tray)
                 DictationNote()
             }
             .frame(maxWidth: 760)
@@ -260,6 +265,15 @@ private struct ComposerPanel: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background.ignoresSafeArea())
         .task(id: target) {
+            tray.project = target.project
+            #if DEBUG
+            // `-debugAttach <file>` puts a file in the tray (UI tests can't drive the photo picker).
+            if let path = UserDefaults.standard.string(forKey: "debugAttach"), tray.isEmpty,
+               let data = FileManager.default.contents(atPath: path) {
+                tray.add(data: data, name: (path as NSString).lastPathComponent,
+                         type: UTType(filenameExtension: (path as NSString).pathExtension))
+            }
+            #endif
             model.openConversation = target.key
             model.markRead(target)
             await model.refreshMessages(target)
@@ -323,16 +337,21 @@ private struct ComposerPanel: View {
         target.thread == nil ? "Ask or tell the coordinator…" : "Message this thread…"
     }
 
-    private var canSend: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !sending }
+    private var canSend: Bool {
+        (!text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !tray.readyIDs.isEmpty)
+            && !tray.isUploading && !sending
+    }
 
     private func send() {
         let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let files = tray.readyIDs
         sending = true
         error = nil
         Task {
             do {
-                try await model.send(target, body)
+                try await model.send(target, body, attachments: files)
                 text = ""
+                tray.clear()
             } catch {
                 self.error = error.localizedDescription
             }
@@ -347,14 +366,22 @@ private struct MessageExchange: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if let atts = item.attachments, !atts.isEmpty {
+                HStack {
+                    Spacer(minLength: 40)
+                    AttachmentsView(attachments: atts)
+                }
+            }
+            if let text = item.text, !text.isEmpty {
             HStack {
                 Spacer(minLength: 40)
-                Text(item.text ?? "")
+                Text(text)
                     .font(.system(size: 14))
                     .foregroundStyle(Theme.text)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
             }
             switch item.state {
             case "replied":
