@@ -105,6 +105,7 @@ func serve(args []string) error {
 	apnsKeyID := fs.String("apns-key-id", os.Getenv("SIDEKICK_APNS_KEY_ID"), "APNs key id")
 	apnsTeam := fs.String("apns-team", os.Getenv("SIDEKICK_APNS_TEAM_ID"), "Apple developer team id")
 	bundleID := fs.String("bundle-id", "gg.cartridge.sidekick", "the app's bundle id (APNs topic)")
+	agentHTTP := fs.String("agent-http", "", "TESTING ONLY: also serve the agent API on this TCP address (e.g. 127.0.0.1:17602) so UI tests can act as agents")
 	fs.Parse(args)
 	if *artURL == "" {
 		return fmt.Errorf("-artifact-url is required")
@@ -144,8 +145,15 @@ func serve(args []string) error {
 	}
 	os.Chmod(*sock, 0o600)
 
-	errc := make(chan error, 3)
+	errc := make(chan error, 4)
 	go func() { errc <- http.Serve(ln, srv.agentMux()) }()
+	if *agentHTTP != "" {
+		if host, _, _ := net.SplitHostPort(*agentHTTP); host != "127.0.0.1" && host != "localhost" {
+			return fmt.Errorf("-agent-http must be a loopback address")
+		}
+		log.Printf("sidekick: TEST agent API on http://%s", *agentHTTP)
+		go func() { errc <- http.ListenAndServe(*agentHTTP, srv.agentMux()) }()
+	}
 	go func() { errc <- http.ListenAndServe(*listen, srv.userMux()) }()
 	go func() {
 		files := http.FileServer(http.Dir(filepath.Join(*data, "artifacts")))

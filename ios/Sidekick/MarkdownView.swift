@@ -39,27 +39,27 @@ struct MarkdownView: View {
                 .foregroundStyle(Theme.text)
                 .padding(.top, level <= 2 ? 10 : 4)
         case .paragraph(let s):
-            Text(inline(s)).font(.system(size: 15)).foregroundStyle(Theme.text.opacity(0.88)).lineSpacing(3)
+            Text(inline(s)).font(.ui(size: 15)).foregroundStyle(Theme.text.opacity(0.88)).lineSpacing(3)
         case .bullet(let s, let indent):
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text("•").foregroundStyle(Theme.secondary)
-                Text(inline(s)).font(.system(size: 15)).foregroundStyle(Theme.text.opacity(0.88)).lineSpacing(3)
+                Text(inline(s)).font(.ui(size: 15)).foregroundStyle(Theme.text.opacity(0.88)).lineSpacing(3)
             }
             .padding(.leading, CGFloat(indent) * 16)
         case .numbered(let n, let s):
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(n).font(.system(size: 15).monospacedDigit()).foregroundStyle(Theme.secondary)
-                Text(inline(s)).font(.system(size: 15)).foregroundStyle(Theme.text.opacity(0.88)).lineSpacing(3)
+                Text(n).font(.ui(size: 15).monospacedDigit()).foregroundStyle(Theme.secondary)
+                Text(inline(s)).font(.ui(size: 15)).foregroundStyle(Theme.text.opacity(0.88)).lineSpacing(3)
             }
         case .quote(let s):
             Text(inline(s))
-                .font(.system(size: 15))
+                .font(.ui(size: 15))
                 .foregroundStyle(Theme.secondary)
                 .padding(.leading, 12)
                 .overlay(alignment: .leading) { Rectangle().fill(Theme.accent.opacity(0.6)).frame(width: 2) }
         case .code(let s):
             ScrollView(.horizontal, showsIndicators: false) {
-                Text(s).font(.system(size: 12, design: .monospaced)).foregroundStyle(Theme.text.opacity(0.85))
+                Text(s).font(.ui(size: 12, design: .monospaced)).foregroundStyle(Theme.text.opacity(0.85))
                     .padding(12)
             }
             .background(Theme.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))

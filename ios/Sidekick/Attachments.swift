@@ -114,7 +114,7 @@ struct AttachButton: View {
             Button { showFiles = true } label: { Label(fileLabel, systemImage: "folder") }
         } label: {
             Image(systemName: "paperclip")
-                .font(.system(size: 16, weight: .medium))
+                .font(.ui(size: 16, weight: .medium))
                 .foregroundStyle(Theme.secondary)
                 .frame(width: 32, height: 32)
                 .contentShape(Rectangle())
@@ -166,8 +166,8 @@ struct AttachmentTrayView: View {
                                     Image(platform: preview).resizable().scaledToFill()
                                 } else {
                                     VStack(spacing: 4) {
-                                        Image(systemName: "doc").font(.system(size: 18))
-                                        Text(item.name).font(.system(size: 9)).lineLimit(2).multilineTextAlignment(.center)
+                                        Image(systemName: "doc").font(.ui(size: 18))
+                                        Text(item.name).font(.ui(size: 9)).lineLimit(2).multilineTextAlignment(.center)
                                     }
                                     .foregroundStyle(Theme.secondary)
                                     .padding(6)
@@ -185,7 +185,7 @@ struct AttachmentTrayView: View {
                             }
                             Button { tray.remove(item.id) } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 16))
+                                    .font(.ui(size: 16))
                                     .foregroundStyle(Theme.text, Theme.background)
                             }
                             .buttonStyle(.plain)
@@ -221,7 +221,7 @@ struct AttachmentsView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         } else {
                             Label(a.name, systemImage: "doc")
-                                .font(.system(size: 13))
+                                .font(.ui(size: 13))
                                 .foregroundStyle(Theme.text)
                                 .lineLimit(1)
                                 .padding(.horizontal, 10)

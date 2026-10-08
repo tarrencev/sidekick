@@ -30,9 +30,19 @@ thread acme t-0016 "Gift cards" idle "" w5:p1 ""
 project field "Field App" "Offline-first inspections app for the field team." w9:p1
 thread field t-0003 "Offline sync" working "~35%" w9:p2 https://github.com/sidekick-demo-co/field/pull/41
 
+# A long report and some files for the checkout thread (the thread page's sections).
+{
+  printf '## Report\n\nOne-page checkout is built and green. This report is long on purpose: real reports run to tens of kilobytes.\n\n'
+  for i in $(seq 1 120); do printf '### Step %d\n\nChecked the checkout flow on device %d. See https://github.com/sidekick-demo-co/storefront/pull/128 for the diff.\n\n- Address form validated\n- Apple Pay sheet opened\n\n' "$i" "$i"; done
+} > hp/acme/threads/t-0012.md
+mkdir -p hp/acme/library/t-0012
+printf '# Test notes\n\nAll 14 checkout tests pass on iPhone and Android.\n' > hp/acme/library/t-0012/test-notes.md
+printf 'step,before_s,after_s\naddress,8.1,3.2\npayment,6.4,2.0\n' > hp/acme/library/t-0012/timings.csv
+
 printf '#!/bin/sh\ncat >> "%s/delivered.log"\n' "$demo" > fakehp; chmod +x fakehp
 "$sk" serve -data data -projects-root hp -listen 127.0.0.1:17600 -artifacts-listen 127.0.0.1:17601 \
-  -artifact-url http://127.0.0.1:17601 -socket agent.sock -herdr-projects "$demo/fakehp" > serve.log 2>&1 &
+  -artifact-url http://127.0.0.1:17601 -socket agent.sock -herdr-projects "$demo/fakehp" \
+  -agent-http 127.0.0.1:17602 > serve.log 2>&1 &   # the agent API over HTTP lets UI tests act as agents
 daemon=$!
 trap 'kill $daemon 2>/dev/null' EXIT
 sleep 1
@@ -98,5 +108,5 @@ pane w1:p1 propose "Order tracking emails" -why "Support gets 40 'where is my or
 msg=$(curl -s -XPOST http://127.0.0.1:17600/api/messages -d '{"project":"acme","text":"How close are we to shipping checkout? Anything I should worry about before the sale?"}' | sed 's/.*"id":"\([^"]*\)".*/\1/')
 curl -s --unix-socket agent.sock -XPOST "http://sidekick/v1/messages/$msg/reply" -d '{"text":"Checkout is ready: CI is green on PR #128 and it is waiting on your review. Two things before the sale:\n\n- **Payment upgrade first.** PR #127 has to merge before #128; both are green.\n- **Gift cards** are not in the new checkout yet. If you want them for the sale, I can start that thread today.\n\nEverything else is on track."}' > /dev/null
 
-echo "Demo running: app API http://127.0.0.1:17600, artifacts http://127.0.0.1:17601 (data in $demo). Ctrl-C to stop."
+echo "Demo running: app API http://127.0.0.1:17600, artifacts http://127.0.0.1:17601, test agent API http://127.0.0.1:17602 (data in $demo). Ctrl-C to stop."
 wait $daemon

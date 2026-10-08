@@ -10,6 +10,8 @@ struct HoldToTalkCircle<Label: View>: View {
     var name = "Compose"
     let onTap: () -> Void
     let onTranscript: (String) -> Void
+    /// Called as soon as a hold ends, before the transcript is ready.
+    var onRelease: (() -> Void)?
     @ViewBuilder var label: Label
 
     @State private var id = UUID()
@@ -37,7 +39,7 @@ struct HoldToTalkCircle<Label: View>: View {
                     ProgressView().tint(filled ? Theme.background : Theme.accent)
                 } else if active {
                     Image(systemName: "waveform")
-                        .font(.system(size: size * 0.36, weight: .semibold))
+                        .font(.ui(size: size * 0.36, weight: .semibold))
                         .foregroundStyle(Theme.background)
                         .symbolEffect(.variableColor.iterative, isActive: dictation.phase == .recording)
                 } else {
@@ -66,6 +68,7 @@ struct HoldToTalkCircle<Label: View>: View {
                     if holding {
                         holding = false
                         dictation.end(id)
+                        onRelease?()
                     } else {
                         onTap()
                     }
@@ -127,10 +130,12 @@ private struct FloatingComposer: ViewModifier {
                         onTranscript: { spoken in
                             if !spoken.isEmpty { text = text.isEmpty ? spoken : text + " " + spoken }
                             withAnimation(.snappy(duration: 0.3)) { open = true }
-                        }
+                        },
+                        // Open right away on release; the words fill in when transcribed.
+                        onRelease: { withAnimation(.snappy(duration: 0.3)) { open = true } }
                     ) {
                         Image(systemName: "plus")
-                            .font(.system(size: 22, weight: .semibold))
+                            .font(.ui(size: 22, weight: .semibold))
                             .foregroundStyle(Theme.background)
                     }
                     .overlay(alignment: .topTrailing) {
@@ -194,7 +199,7 @@ private struct ComposerPanel: View {
                         .font(Theme.serif(22))
                         .foregroundStyle(Theme.text)
                     Text(hint)
-                        .font(.system(size: 13))
+                        .font(.ui(size: 13))
                         .foregroundStyle(Theme.tertiary)
                         .multilineTextAlignment(.center)
                 }
@@ -223,14 +228,14 @@ private struct ComposerPanel: View {
             Hairline()
             VStack(alignment: .leading, spacing: 6) {
                 if let error {
-                    Text(error).font(.system(size: 12)).foregroundStyle(Theme.accent)
+                    Text(error).font(.ui(size: 12)).foregroundStyle(Theme.accent)
                 }
                 AttachmentTrayView(tray: tray)
                 HStack(alignment: .bottom, spacing: 4) {
                     AttachButton(tray: tray)
                     TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Theme.tertiary), axis: .vertical)
                         .lineLimit(1...10)
-                        .font(.system(size: 15))
+                        .font(.ui(size: 15))
                         .foregroundStyle(Theme.text)
                         .tint(Theme.accent)
                         .textFieldStyle(.plain)
@@ -240,7 +245,7 @@ private struct ComposerPanel: View {
                     MicButton(text: $text)
                     Button(action: send) {
                         Image(systemName: sending ? "ellipsis" : "arrow.up")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.ui(size: 15, weight: .bold))
                             .foregroundStyle(Theme.background)
                             .frame(width: 32, height: 32)
                             .background(Theme.accent.opacity(canSend ? 1 : 0.35), in: Circle())
@@ -298,24 +303,24 @@ private struct ComposerPanel: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Text("To").font(.system(size: 13)).foregroundStyle(Theme.tertiary)
+            Text("To").font(.ui(size: 13)).foregroundStyle(Theme.tertiary)
             if canPickProject {
                 Menu {
                     ForEach(model.projects) { p in Button(p.name) { pick(p.slug) } }
                 } label: {
                     HStack(spacing: 4) {
                         Text(recipient).lineLimit(1)
-                        Image(systemName: "chevron.up.chevron.down").font(.system(size: 10))
+                        Image(systemName: "chevron.up.chevron.down").font(.ui(size: 10))
                     }
-                    .font(.system(size: 13, weight: .medium))
+                    .font(.ui(size: 13, weight: .medium))
                     .foregroundStyle(Theme.text)
                 }
             } else {
-                Text(recipient).font(.system(size: 13, weight: .medium)).foregroundStyle(Theme.text).lineLimit(1)
+                Text(recipient).font(.ui(size: 13, weight: .medium)).foregroundStyle(Theme.text).lineLimit(1)
             }
             Spacer()
             Button(action: close) {
-                Image(systemName: "xmark").font(.system(size: 14, weight: .semibold)).foregroundStyle(Theme.secondary)
+                Image(systemName: "xmark").font(.ui(size: 14, weight: .semibold)).foregroundStyle(Theme.secondary)
                     .frame(width: 32, height: 32)
                     .contentShape(Rectangle())
             }
@@ -377,7 +382,7 @@ private struct MessageExchange: View {
             HStack {
                 Spacer(minLength: 40)
                 Text(text)
-                    .font(.system(size: 14))
+                    .font(.ui(size: 14))
                     .foregroundStyle(Theme.text)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -389,11 +394,11 @@ private struct MessageExchange: View {
                 MarkdownView(text: item.reply ?? "")
             case "failed":
                 Text(item.error ?? "Couldn't deliver this message.")
-                    .font(.system(size: 13)).foregroundStyle(Theme.accent)
+                    .font(.ui(size: 13)).foregroundStyle(Theme.accent)
             default:
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(Theme.secondary)
-                    Text("Delivered · waiting for a reply").font(.system(size: 12)).foregroundStyle(Theme.tertiary)
+                    Text("Delivered · waiting for a reply").font(.ui(size: 12)).foregroundStyle(Theme.tertiary)
                 }
             }
         }

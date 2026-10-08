@@ -29,6 +29,7 @@ struct ProjectsView: View {
                 if !model.projects.isEmpty { Hairline() }
             }
             .padding(.horizontal, 20)
+            .readableWidth()
             .padding(.top, 8)
         }
         .readingRoom()
@@ -50,14 +51,14 @@ private struct ProjectRow: View {
                     .foregroundStyle(Theme.text)
                 HStack(alignment: .firstTextBaseline) {
                     Text(project.status?.headline ?? project.goal ?? "No status yet.")
-                        .font(.system(size: 14))
+                        .font(.ui(size: 14))
                         .foregroundStyle(Theme.secondary)
                         .lineLimit(2)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .medium))
+                .font(.ui(size: 13, weight: .medium))
                 .foregroundStyle(Theme.tertiary)
         }
         .padding(.vertical, 18)
@@ -75,10 +76,10 @@ private struct EmptyProjects: View {
                 .font(Theme.serif(20))
                 .foregroundStyle(Theme.text)
             Text(error ?? "Projects created with herdr-projects show up here.")
-                .font(.system(size: 14))
+                .font(.ui(size: 14))
                 .foregroundStyle(Theme.secondary)
             Button("Server settings", action: openSettings)
-                .font(.system(size: 14))
+                .font(.ui(size: 14))
                 .foregroundStyle(Theme.accent)
                 .padding(.top, 4)
         }

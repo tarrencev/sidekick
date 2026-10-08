@@ -22,7 +22,7 @@ struct InboxView: View {
                     .foregroundStyle(Theme.text)
                 segmented
                 if let actionError {
-                    Text(actionError).font(.system(size: 12)).foregroundStyle(Theme.accent)
+                    Text(actionError).font(.ui(size: 12)).foregroundStyle(Theme.accent)
                 }
             }
             .padding(.top, 8)
@@ -52,6 +52,7 @@ struct InboxView: View {
             }
         }
         .listStyle(.plain)
+        .readableWidth()
         .environment(\.defaultMinListRowHeight, 0)
         .readingRoom()
         .hidesNavigationBar()
@@ -149,10 +150,10 @@ struct InboxView: View {
             withAnimation(.snappy(duration: 0.2)) { action() }
         } label: {
             HStack(spacing: 6) {
-                Text(title).font(.system(size: 14))
+                Text(title).font(.ui(size: 14))
                 if let count, count > 0 {
                     Text("\(count)")
-                        .font(.system(size: 11, weight: .bold).monospacedDigit())
+                        .font(.ui(size: 11, weight: .bold).monospacedDigit())
                         .foregroundStyle(Theme.background)
                         .frame(minWidth: 18, minHeight: 18)
                         .background(Theme.accent, in: Circle())
@@ -184,20 +185,20 @@ private struct InboxRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text(label)
-                        .font(.system(size: 12))
+                        .font(.ui(size: 12))
                         .foregroundStyle(Theme.secondary)
                         .lineLimit(1)
                     Spacer()
                     Text((item.closed ?? item.created).ago)
-                        .font(.system(size: 12))
+                        .font(.ui(size: 12))
                         .foregroundStyle(Theme.tertiary)
                 }
                 Text(item.headline)
-                    .font(.system(size: 15))
+                    .font(.ui(size: 15))
                     .foregroundStyle(Theme.text)
                     .lineLimit(2)
                 Text([entry.projectName, entry.threadTitle ?? (item.thread == nil ? "Coordinator" : item.thread!)].joined(separator: " · "))
-                    .font(.system(size: 12))
+                    .font(.ui(size: 12))
                     .foregroundStyle(Theme.tertiary)
                     .lineLimit(1)
             }
@@ -215,13 +216,13 @@ private struct InboxRow: View {
         }
         if item.needsYou {
             Image(systemName: symbol)
-                .font(.system(size: 11, weight: .bold))
+                .font(.ui(size: 11, weight: .bold))
                 .foregroundStyle(Theme.background)
                 .frame(width: 20, height: 20)
                 .background(Theme.accent, in: Circle())
         } else {
             Image(systemName: symbol)
-                .font(.system(size: 10, weight: .semibold))
+                .font(.ui(size: 10, weight: .semibold))
                 .foregroundStyle(Theme.secondary)
                 .frame(width: 20, height: 20)
                 .overlay(Circle().strokeBorder(Theme.tertiary))

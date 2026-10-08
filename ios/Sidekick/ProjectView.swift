@@ -44,6 +44,7 @@ struct ProjectView: View {
                     }
                 }
                 .padding(.horizontal, 20)
+                .readableWidth()
                 .padding(.bottom, 24)
             } else {
                 ProgressView().padding(.top, 80)
@@ -63,7 +64,7 @@ struct ProjectView: View {
                 .foregroundStyle(Theme.text)
             if let status = d.status {
                 Text("\(status.tone.label) · updated \(status.updated.ago)")
-                    .font(.system(size: 12))
+                    .font(.ui(size: 12))
                     .foregroundStyle(status.tone == .blocked || status.tone == .atRisk ? Theme.accent : Theme.tertiary)
                 Text(status.headline)
                     .font(Theme.serif(22))
@@ -71,13 +72,13 @@ struct ProjectView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if let summary = status.summary, !summary.isEmpty {
                     LinkedText(summary)
-                        .font(.system(size: 16))
+                        .font(.ui(size: 16))
                         .foregroundStyle(Theme.text.opacity(0.85))
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                 } else {
                     ForEach(status.notes ?? [], id: \.self) { note in
-                        Text(note).font(.system(size: 14)).foregroundStyle(Theme.secondary)
+                        Text(note).font(.ui(size: 14)).foregroundStyle(Theme.secondary)
                     }
                 }
                 if let link = status.link?.asLink {
@@ -85,7 +86,7 @@ struct ProjectView: View {
                 }
             } else {
                 Text(d.goal ?? "No status yet.")
-                    .font(.system(size: 15))
+                    .font(.ui(size: 15))
                     .foregroundStyle(Theme.secondary)
             }
         }
@@ -115,16 +116,16 @@ private struct ThreadRow: View {
                 HStack(alignment: .center, spacing: 14) {
                     AgentMarker(group: thread.group)
                     Text(thread.title)
-                        .font(.system(size: 15))
+                        .font(.ui(size: 15))
                         .foregroundStyle(Theme.text)
                         .lineLimit(expanded ? nil : 2)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     Text(label)
-                        .font(.system(size: 12))
+                        .font(.ui(size: 12))
                         .foregroundStyle(thread.group == "waiting-on-you" ? Theme.accent : Theme.secondary)
                         .fixedSize()
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.ui(size: 12, weight: .medium))
                         .foregroundStyle(Theme.tertiary)
                         .rotationEffect(.degrees(expanded ? 180 : 0))
                 }
@@ -136,7 +137,7 @@ private struct ThreadRow: View {
             if expanded {
                 VStack(alignment: .leading, spacing: 14) {
                     LinkedText(thread.summary?.isEmpty == false ? thread.summary! : (thread.line ?? "No summary yet."))
-                        .font(.system(size: 14))
+                        .font(.ui(size: 14))
                         .foregroundStyle(Theme.text.opacity(0.82))
                         .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -145,9 +146,9 @@ private struct ThreadRow: View {
                         NavigationLink(value: Route.thread(project: slug, id: thread.id)) {
                             HStack(spacing: 4) {
                                 Text("Open thread")
-                                Image(systemName: "chevron.right").font(.system(size: 11, weight: .semibold))
+                                Image(systemName: "chevron.right").font(.ui(size: 11, weight: .semibold))
                             }
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.ui(size: 13, weight: .medium))
                             .foregroundStyle(Theme.text)
                             .padding(.horizontal, 11)
                             .padding(.vertical, 6)
@@ -188,7 +189,7 @@ private struct AgentMarker: View {
             switch group {
             case "ready-for-review", "landing":
                 Circle().fill(Theme.accent)
-                Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Theme.background)
+                Image(systemName: "checkmark").font(.ui(size: 10, weight: .bold)).foregroundStyle(Theme.background)
             case "working":
                 Circle().fill(Theme.accent)
             case "waiting-on-you":
@@ -230,12 +231,12 @@ private struct PlanSection: View {
                     ForEach(Array(merges.enumerated()), id: \.offset) { i, m in
                         Hairline()
                         HStack(alignment: .firstTextBaseline, spacing: 12) {
-                            Text("\(i + 1)").font(.system(size: 13, weight: .semibold).monospacedDigit())
+                            Text("\(i + 1)").font(.ui(size: 13, weight: .semibold).monospacedDigit())
                                 .foregroundStyle(Theme.tertiary).frame(width: 16)
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(m.title).font(.system(size: 15)).foregroundStyle(Theme.text)
+                                Text(m.title).font(.ui(size: 15)).foregroundStyle(Theme.text)
                                 if let note = m.note, !note.isEmpty {
-                                    Text(note).font(.system(size: 12)).foregroundStyle(Theme.secondary)
+                                    Text(note).font(.ui(size: 12)).foregroundStyle(Theme.secondary)
                                 }
                                 if let url = m.pr.asLink { LinkPill(url: url) }
                             }
@@ -249,16 +250,16 @@ private struct PlanSection: View {
                     ForEach(Array(next.enumerated()), id: \.offset) { _, n in
                         Hairline()
                         VStack(alignment: .leading, spacing: 3) {
-                            Text(n.title).font(.system(size: 15)).foregroundStyle(Theme.text.opacity(0.85))
+                            Text(n.title).font(.ui(size: 15)).foregroundStyle(Theme.text.opacity(0.85))
                             if let note = n.note, !note.isEmpty {
-                                Text(note).font(.system(size: 12)).foregroundStyle(Theme.secondary)
+                                Text(note).font(.ui(size: 12)).foregroundStyle(Theme.secondary)
                             }
                         }
                         .padding(.vertical, 11)
                     }
                 }
             }
-            Text("Plan updated \(plan.updated.ago)").font(.system(size: 11)).foregroundStyle(Theme.tertiary)
+            Text("Plan updated \(plan.updated.ago)").font(.ui(size: 11)).foregroundStyle(Theme.tertiary)
         }
     }
 
@@ -279,16 +280,16 @@ private struct WorkRow: View {
 
     var body: some View {
         let row = HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text("\(rank)").font(.system(size: 13, weight: .semibold).monospacedDigit())
+            Text("\(rank)").font(.ui(size: 13, weight: .semibold).monospacedDigit())
                 .foregroundStyle(Theme.tertiary).frame(width: 16)
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(work.title).font(.system(size: 15)).foregroundStyle(Theme.text)
+                    Text(work.title).font(.ui(size: 15)).foregroundStyle(Theme.text)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     StageChip(stage: work.stage)
                 }
                 if let note = work.note, !note.isEmpty {
-                    Text(note).font(.system(size: 12)).foregroundStyle(Theme.secondary)
+                    Text(note).font(.ui(size: 12)).foregroundStyle(Theme.secondary)
                 }
                 if work.stage == "blocked" { blocker }
                 if let url = work.pr?.asLink { LinkPill(url: url) }
@@ -309,14 +310,14 @@ private struct WorkRow: View {
     @ViewBuilder private var blocker: some View {
         if work.ask != nil {
             Label("Waiting on your answer", systemImage: "arrow.turn.down.right")
-                .font(.system(size: 12, weight: .medium))
+                .font(.ui(size: 12, weight: .medium))
                 .foregroundStyle(Theme.accent)
         } else if work.waitsOnUser {
             Text("Waiting on you, but nothing's in your inbox yet. The coordinator has been asked to send it.")
-                .font(.system(size: 12))
+                .font(.ui(size: 12))
                 .foregroundStyle(Theme.tertiary)
         } else if let waitingOn = work.waitingOn, !waitingOn.isEmpty {
-            Text("Waiting on \(waitingOn)").font(.system(size: 12)).foregroundStyle(Theme.secondary)
+            Text("Waiting on \(waitingOn)").font(.ui(size: 12)).foregroundStyle(Theme.secondary)
         }
     }
 }
@@ -330,7 +331,7 @@ struct StageChip: View {
             Circle().fill(color).frame(width: 6, height: 6)
             Text(stage.capitalized)
         }
-        .font(.system(size: 11, weight: .medium))
+        .font(.ui(size: 11, weight: .medium))
         .foregroundStyle(color)
         .fixedSize()
     }

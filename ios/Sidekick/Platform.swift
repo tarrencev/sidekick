@@ -2,6 +2,11 @@ import SwiftUI
 
 /// Small shims so the same views build for iOS and macOS.
 extension View {
+    /// Keeps reading content to a comfortable width, centered, on iPad and the Mac.
+    func readableWidth(_ width: CGFloat = 760) -> some View {
+        frame(maxWidth: width).frame(maxWidth: .infinity)
+    }
+
     /// A compact navigation title (iOS); the Mac window toolbar is already compact.
     @ViewBuilder func inlineTitle() -> some View {
         #if os(iOS)
@@ -39,7 +44,9 @@ extension View {
             // A multi-line field inserts a newline instead of submitting: treat a typed
             // Return (one new trailing newline) as send.
             .onChange(of: text.wrappedValue) { old, new in
-                guard new.count == old.count + 1, new.hasSuffix("\n") else { return }
+                // Fast typing or a suggestion can add the Return together with other
+                // characters, so look for any growth that ends in a new newline.
+                guard new.count > old.count, new.hasSuffix("\n"), !old.hasSuffix("\n") else { return }
                 text.wrappedValue = String(new.dropLast())
                 send()
             }

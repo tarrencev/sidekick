@@ -63,6 +63,15 @@ targets:
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
+  SidekickMacUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources: [SidekickMacUITests, SidekickUITests/Demo.swift]
+    dependencies:
+      - target: SidekickMac
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
 schemes:
   Sidekick:
     build:
@@ -75,3 +84,6 @@ schemes:
     build:
       targets:
         SidekickMac: all
+        SidekickMacUITests: [test]
+    test:
+      targets: [SidekickMacUITests]

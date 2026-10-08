@@ -62,6 +62,9 @@ final class AppDelegate: NSObject, PlatformAppDelegate, UNUserNotificationCenter
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let info = response.notification.request.content.userInfo
+        #if DEBUG
+        NSLog("SIDEKICK_PUSH tapped userInfo=%@", String(describing: info))
+        #endif
         let link = DeepLink(
             item: info["item"] as? String,
             project: info["project"] as? String,

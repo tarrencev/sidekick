@@ -20,11 +20,12 @@ struct QuestionView: View {
                 }
                 if !item.isPending {
                     Text("\(item.outcome) \(item.closed.map { "· \($0.ago)" } ?? "")")
-                        .font(.system(size: 14))
+                        .font(.ui(size: 14))
                         .foregroundStyle(Theme.secondary)
                 }
             }
             .padding(.horizontal, 20)
+            .readableWidth()
             .padding(.top, 8)
             .padding(.bottom, 24)
         }
@@ -36,10 +37,11 @@ struct QuestionView: View {
         .safeAreaInset(edge: .bottom) {
             if item.isPending {
                 VStack(spacing: 8) {
-                    if let error { Text(error).font(.system(size: 12)).foregroundStyle(Theme.accent) }
+                    if let error { Text(error).font(.ui(size: 12)).foregroundStyle(Theme.accent) }
                     PrimaryButton(title: "Submit answer", busy: sending, enabled: complete, action: send)
                 }
                 .padding(.horizontal, 20)
+                .readableWidth()
                 .padding(.vertical, 10)
                 .background(Theme.background)
             }
@@ -54,7 +56,7 @@ struct QuestionView: View {
                     .foregroundStyle(Theme.text)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(context(q))
-                    .font(.system(size: 14))
+                    .font(.ui(size: 14))
                     .foregroundStyle(Theme.secondary)
             }
             let options = q.options ?? []
@@ -68,7 +70,7 @@ struct QuestionView: View {
                 if item.isPending {
                     VStack(alignment: .leading, spacing: 8) {
                         if !options.isEmpty {
-                            Text("Other").font(.system(size: 15)).foregroundStyle(Theme.text)
+                            Text("Other").font(.ui(size: 15)).foregroundStyle(Theme.text)
                         }
                         InputBox(placeholder: options.isEmpty ? "Your answer" : "Share your thoughts…", text: binding(for: q), minLines: 1,
                                  onSubmit: { if complete && !sending { send() } })
@@ -76,7 +78,7 @@ struct QuestionView: View {
                     .padding(.top, 14)
                 } else if let answer = item.answers?[q.question] {
                     Text("You answered: \(answer)")
-                        .font(.system(size: 14))
+                        .font(.ui(size: 14))
                         .foregroundStyle(Theme.text)
                         .padding(.top, 14)
                 }
@@ -159,7 +161,7 @@ private struct OptionRow: View {
                     ZStack {
                         if multi {
                             RoundedRectangle(cornerRadius: 5).strokeBorder(selected ? Theme.accent : Theme.tertiary, lineWidth: 1.3)
-                            if selected { Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(Theme.accent) }
+                            if selected { Image(systemName: "checkmark").font(.ui(size: 11, weight: .bold)).foregroundStyle(Theme.accent) }
                         } else {
                             Circle().strokeBorder(selected ? Theme.accent : Theme.tertiary, lineWidth: 1.3)
                             if selected { Circle().fill(Theme.accent).padding(5) }
@@ -169,11 +171,11 @@ private struct OptionRow: View {
                     .padding(.top, 1)
                     VStack(alignment: .leading, spacing: 3) {
                         Text("\(letter). \(option.label)")
-                            .font(.system(size: 15))
+                            .font(.ui(size: 15))
                             .foregroundStyle(Theme.text)
                         if let d = option.description, !d.isEmpty, !descriptionHasLinks {
                             Text(d)
-                                .font(.system(size: 13))
+                                .font(.ui(size: 13))
                                 .foregroundStyle(Theme.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
@@ -187,7 +189,7 @@ private struct OptionRow: View {
 
             if let d = option.description, !d.isEmpty, descriptionHasLinks {
                 LinkedText(d)
-                    .font(.system(size: 13))
+                    .font(.ui(size: 13))
                     .foregroundStyle(Theme.secondary)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.leading, 34)

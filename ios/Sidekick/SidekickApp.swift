@@ -165,10 +165,12 @@ extension View {
     }
 }
 
-/// Opens the right screen for an item, using its freshest copy.
+/// Opens the right screen for an item, using its freshest copy. An item that isn't
+/// loaded yet (e.g. a push tapped while the app was in the background) is fetched.
 struct ItemView: View {
     @Environment(AppModel.self) private var model
     let id: String
+    @State private var looked = false
 
     var body: some View {
         if let item = model.item(id) {
@@ -177,6 +179,14 @@ struct ItemView: View {
             case .review, .proposal: ApprovalView(item: item)
             case .message: ThreadOrProject(item: item)
             }
+        } else if !looked {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .readingRoom()
+                .task {
+                    await model.refreshInbox()
+                    looked = true
+                }
         } else {
             ContentUnavailableView("Gone", systemImage: "tray", description: Text("This item no longer exists."))
                 .readingRoom()

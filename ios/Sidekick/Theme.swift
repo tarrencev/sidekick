@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#endif
 
 /// "Reading room": near-black paper, warm off-white type, serif headings, one coral accent.
 enum Theme {
@@ -11,7 +14,7 @@ enum Theme {
     static let accent = Color(red: 1.0, green: 0.478, blue: 0.392)
 
     static func serif(_ size: CGFloat, _ weight: Font.Weight = .regular) -> Font {
-        .system(size: size, weight: weight, design: .serif)
+        .ui(size: size, weight: weight, design: .serif)
     }
 }
 
@@ -41,7 +44,7 @@ struct SectionTitle: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 13))
+            .font(.ui(size: 13))
             .foregroundStyle(Theme.secondary)
     }
 }
@@ -56,7 +59,7 @@ struct PrimaryButton: View {
     var body: some View {
         Button(action: action) {
             Text(busy ? "Sending…" : title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.ui(size: 15, weight: .semibold))
                 .foregroundStyle(enabled ? Theme.background : Theme.tertiary)
                 .frame(maxWidth: .infinity, minHeight: 48)
                 .background(enabled ? Theme.accent : Theme.surface, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
@@ -79,7 +82,7 @@ struct InputBox: View {
             HStack(alignment: .top, spacing: 6) {
                 TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Theme.tertiary), axis: .vertical)
                     .lineLimit(minLines...10)
-                    .font(.system(size: 15))
+                    .font(.ui(size: 15))
                     .foregroundStyle(Theme.text)
                     .tint(Theme.accent)
                     .padding(.vertical, 14)
@@ -104,17 +107,17 @@ struct ArtifactRow: View {
     var body: some View {
         HStack(spacing: 14) {
             Image(systemName: "doc.text")
-                .font(.system(size: 20, weight: .light))
+                .font(.ui(size: 20, weight: .light))
                 .foregroundStyle(Theme.text)
                 .frame(width: 36, height: 40)
                 .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Theme.line))
             VStack(alignment: .leading, spacing: 3) {
-                Text(title).font(.system(size: 15)).foregroundStyle(Theme.text)
-                Text(subtitle).font(.system(size: 12)).foregroundStyle(Theme.secondary)
+                Text(title).font(.ui(size: 15)).foregroundStyle(Theme.text)
+                Text(subtitle).font(.ui(size: 12)).foregroundStyle(Theme.secondary)
             }
             Spacer()
             Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .medium))
+                .font(.ui(size: 13, weight: .medium))
                 .foregroundStyle(Theme.tertiary)
         }
         .contentShape(Rectangle())
@@ -150,7 +153,7 @@ struct LinkPill: View {
                     Text(detail).foregroundStyle(look.color.opacity(0.75))
                 }
             }
-            .font(.system(size: 13, weight: .medium))
+            .font(.ui(size: 13, weight: .medium))
             .foregroundStyle(look.color)
             .padding(.horizontal, 11)
             .padding(.vertical, 6)
@@ -200,5 +203,21 @@ private struct SubmitOnReturn: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+extension Font {
+    /// The app's fonts are sized for the default text size and scale with the user's
+    /// Dynamic Type setting (iPhone), like the system text styles do.
+    static func ui(size: CGFloat, weight: Font.Weight = .regular, design: Font.Design = .default) -> Font {
+        .system(size: scaled(size), weight: weight, design: design)
+    }
+
+    static func scaled(_ size: CGFloat) -> CGFloat {
+        #if os(iOS)
+        UIFontMetrics.default.scaledValue(for: size)
+        #else
+        size
+        #endif
     }
 }

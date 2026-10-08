@@ -279,7 +279,7 @@ struct MicButton: View {
                     ProgressView().controlSize(.small).tint(Theme.accent)
                 } else {
                     Image(systemName: active ? "stop.fill" : "mic")
-                        .font(.system(size: active ? 13 : 16, weight: .medium))
+                        .font(.ui(size: active ? 13 : 16, weight: .medium))
                         .foregroundStyle(active ? Theme.accent : Theme.secondary)
                 }
             }
@@ -300,6 +300,8 @@ struct DictationNote: View {
         switch dictation.phase {
         case .preparing:
             note(Self.firstRun ? "Downloading the voice model (about 450 MB, one time)…" : "Loading the voice model…")
+        case .transcribing:
+            note("Transcribing…")
         case .failed(let message):
             note(message, color: Theme.accent)
         default:
@@ -310,6 +312,6 @@ struct DictationNote: View {
     private static var firstRun: Bool { !ParakeetEngine.modelsCached() }
 
     private func note(_ text: String, color: Color = Theme.tertiary) -> some View {
-        Text(text).font(.system(size: 12)).foregroundStyle(color)
+        Text(text).font(.ui(size: 12)).foregroundStyle(color)
     }
 }

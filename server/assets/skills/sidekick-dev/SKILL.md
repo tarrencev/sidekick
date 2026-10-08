@@ -95,6 +95,22 @@ Message it through the API (`POST /api/messages {"project":"trial","text":"…"}
 exercise replies, questions, plans and proposals. The iOS UI tests
 (`ios/SidekickUITests`) drive the same flows in the simulator from the user's Mac.
 
+### UI QA suites
+
+`demo/run.sh` starts a fictional setup on a local daemon (app API :17600, artifacts
+:17601) and, for tests only, the agent API over HTTP on :17602. The UI tests act as the
+agents through it, so each test creates its own items and nothing touches real projects:
+
+```bash
+demo/run.sh &                                   # on the Mac
+SK_ATTACH_FILE=<png> ios/run-ui-tests.sh QAFlows # iPhone: every screen and flow
+xcodebuild test -project ios/Sidekick.xcodeproj -scheme SidekickMac -destination platform=macOS
+```
+
+The Mac suite needs UI automation allowed once:
+`sudo automationmodetool enable-automationmode-without-authentication` and
+`sudo DevToolsSecurity -enable`.
+
 ## The iOS app
 
 SwiftUI, iOS 18, in `ios/`, generated with XcodeGen. It can only be built and installed

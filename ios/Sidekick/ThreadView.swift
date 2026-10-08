@@ -19,11 +19,11 @@ struct ThreadView: View {
                             .foregroundStyle(Theme.text)
                             .fixedSize(horizontal: false, vertical: true)
                         if let line = d.line, !line.isEmpty {
-                            Text(line).font(.system(size: 13)).foregroundStyle(Theme.tertiary)
+                            Text(line).font(.ui(size: 13)).foregroundStyle(Theme.tertiary)
                         }
                         if let summary = d.summary, !summary.isEmpty {
                             LinkedText(summary)
-                                .font(.system(size: 16))
+                                .font(.ui(size: 16))
                                 .foregroundStyle(Theme.text.opacity(0.9))
                                 .lineSpacing(3)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -68,7 +68,7 @@ struct ThreadView: View {
                             MarkdownView(text: report, limit: showFullReport ? nil : preview)
                             if !showFullReport, MarkdownView.blockCount(report) > preview {
                                 Button("Show the full report") { showFullReport = true }
-                                    .font(.system(size: 14, weight: .medium))
+                                    .font(.ui(size: 14, weight: .medium))
                                     .foregroundStyle(Theme.accent)
                                     .buttonStyle(.plain)
                             }
@@ -76,6 +76,7 @@ struct ThreadView: View {
                     }
                 }
                 .padding(.horizontal, 20)
+                .readableWidth()
                 .padding(.bottom, 32)
             } else {
                 ProgressView().padding(.top, 80)

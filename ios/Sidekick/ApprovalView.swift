@@ -24,7 +24,7 @@ struct ApprovalView: View {
                         Text(item.title ?? "Proposed thread").font(Theme.serif(28)).foregroundStyle(Theme.text)
                             .fixedSize(horizontal: false, vertical: true)
                         if let why = item.summary, !why.isEmpty {
-                            LinkedText(why).font(.system(size: 16)).foregroundStyle(Theme.text.opacity(0.85)).lineSpacing(3)
+                            LinkedText(why).font(.ui(size: 16)).foregroundStyle(Theme.text.opacity(0.85)).lineSpacing(3)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         if let plan = item.text, !plan.isEmpty {
@@ -49,8 +49,8 @@ struct ApprovalView: View {
             ToolbarItem(placement: .principal) {
                 Button { withAnimation(.snappy) { showSummary.toggle() } } label: {
                     VStack(spacing: 1) {
-                        Text(item.title ?? "Review").font(.system(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
-                        Text(model.source(of: item)).font(.system(size: 11)).foregroundStyle(Theme.secondary)
+                        Text(item.title ?? "Review").font(.ui(size: 15, weight: .semibold)).foregroundStyle(Theme.text)
+                        Text(model.source(of: item)).font(.ui(size: 11)).foregroundStyle(Theme.secondary)
                     }
                     .lineLimit(1)
                 }
@@ -61,7 +61,7 @@ struct ApprovalView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             if item.kind != .proposal, showSummary || !item.isPending, let summary = item.summary, !summary.isEmpty {
                 LinkedText(summary)
-                    .font(.system(size: 14))
+                    .font(.ui(size: 14))
                     .foregroundStyle(Theme.text.opacity(0.85))
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 20)
@@ -84,13 +84,13 @@ struct ApprovalView: View {
     private var decision: some View {
         VStack(spacing: 12) {
             if let error {
-                Text(error).font(.system(size: 12)).foregroundStyle(Theme.accent)
+                Text(error).font(.ui(size: 12)).foregroundStyle(Theme.accent)
             }
             HStack(alignment: .top, spacing: 0) {
                 circle(item.kind == .proposal ? "Decline" : "Reject") {
                     Button { confirmReject = true } label: {
                         Image(systemName: "xmark")
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.ui(size: 20, weight: .semibold))
                             .foregroundStyle(Theme.text)
                             .frame(width: 60, height: 60)
                             .background(Theme.surface, in: Circle())
@@ -111,14 +111,14 @@ struct ApprovalView: View {
                         }
                     ) {
                         Image(systemName: refining ? "chevron.down" : "text.bubble")
-                            .font(.system(size: 20, weight: .semibold))
+                            .font(.ui(size: 20, weight: .semibold))
                             .foregroundStyle(Theme.text)
                     }
                 }
                 circle("Approve") {
                     Button { send(.approve) } label: {
                         Image(systemName: sending ? "ellipsis" : "checkmark")
-                            .font(.system(size: 22, weight: .bold))
+                            .font(.ui(size: 22, weight: .bold))
                             .foregroundStyle(Theme.background)
                             .frame(width: 60, height: 60)
                             .background(Theme.accent, in: Circle())
@@ -136,7 +136,7 @@ struct ApprovalView: View {
                         AttachButton(tray: tray)
                         TextField("", text: $feedback, prompt: Text("What should change?").foregroundStyle(Theme.tertiary), axis: .vertical)
                             .lineLimit(1...6)
-                            .font(.system(size: 15))
+                            .font(.ui(size: 15))
                             .foregroundStyle(Theme.text)
                             .tint(Theme.accent)
                             .focused($feedbackFocused)
@@ -146,7 +146,7 @@ struct ApprovalView: View {
                         MicButton(text: $feedback)
                         Button { send(.changes) } label: {
                             Image(systemName: "arrow.up")
-                                .font(.system(size: 15, weight: .bold))
+                                .font(.ui(size: 15, weight: .bold))
                                 .foregroundStyle(Theme.background)
                                 .frame(width: 32, height: 32)
                                 .background(Theme.accent.opacity(hasFeedback ? 1 : 0.35), in: Circle())
@@ -175,7 +175,7 @@ struct ApprovalView: View {
     private func circle<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(spacing: 6) {
             content()
-            Text(label).font(.system(size: 12)).foregroundStyle(Theme.secondary)
+            Text(label).font(.ui(size: 12)).foregroundStyle(Theme.secondary)
         }
         .frame(maxWidth: .infinity)
     }
@@ -183,10 +183,10 @@ struct ApprovalView: View {
     private var outcome: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("\(item.outcome)\(item.closed.map { " · \($0.ago)" } ?? "")")
-                .font(.system(size: 15, weight: .medium))
+                .font(.ui(size: 15, weight: .medium))
                 .foregroundStyle(Theme.text)
             if let comment = item.comment, !comment.isEmpty {
-                Text(comment).font(.system(size: 14)).foregroundStyle(Theme.secondary)
+                Text(comment).font(.ui(size: 14)).foregroundStyle(Theme.secondary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

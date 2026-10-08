@@ -143,6 +143,10 @@ final class AppModel {
         // A reply is new if we last saw its message still waiting.
         let waiting = Set(before.filter(\.isPending).map(\.id))
         let newReplies = fresh.filter { $0.state == "replied" && waiting.contains($0.id) }
+        // A reply that arrives while its conversation is on screen has been read.
+        if openConversation == target.key, isForeground, fresh.contains(where: \.isUnreadReply) {
+            markRead(target)
+        }
         if !newReplies.isEmpty, openConversation != target.key || !isForeground {
             unreadReplies.insert(target.key)
             if !pushEnabled { for reply in newReplies { notifyReply(reply, target: target) } }
@@ -163,6 +167,7 @@ final class AppModel {
         unreadReplies.remove(target.key)
         // Read on one device, read everywhere: drops the replies from the Inbox.
         let unread = inbox.contains { $0.item.isUnreadReply && ComposerTarget($0.item) == target }
+            || (messages[target.key] ?? []).contains(where: \.isUnreadReply)
         guard unread, let api else { return }
         Task {
             try? await api.markSeen(target)
@@ -175,6 +180,7 @@ final class AppModel {
         content.title = projects.first { $0.slug == target.project }?.name ?? target.project
         content.body = item.reply ?? "Replied"
         content.sound = .default
+        content.userInfo = ["project": target.project, "item": item.id, "thread": target.thread ?? "", "kind": "reply"]
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "reply-" + item.id, content: content, trigger: nil))
     }
 
@@ -306,7 +312,8 @@ final class AppModel {
                 ? (item.questions?.first?.question ?? "A question needs you")
                 : "Review: \(item.title ?? "artifact")"
             content.sound = .default
-            content.userInfo = ["project": detail.slug]
+            // Same fields as a push, so tapping it opens the item (see DeepLink).
+            content.userInfo = ["project": detail.slug, "item": item.id, "thread": item.thread ?? "", "kind": item.kind.rawValue]
             UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: item.id, content: content, trigger: nil))
         }
     }
