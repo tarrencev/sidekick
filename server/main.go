@@ -27,6 +27,8 @@ func main() {
 		err = cmdAsk(args)
 	case "review":
 		err = cmdReview(args)
+	case "item":
+		err = cmdItem(args)
 	case "status":
 		err = cmdStatus(args)
 	case "whoami":
@@ -65,6 +67,7 @@ func usage() {
 	fmt.Fprint(os.Stderr, `usage:
   sidekick ask "<question>" [-o <option>]... [-context <dir>]   ask the user (answer arrives later)
   sidekick review <path> -title <title> [-summary <s>]  publish a file or static site for review
+  sidekick item <id>                                     print a question or review (state, answers) as JSON
   sidekick status "<headline>" -summary "<3-4 sentences>" [-link <url>] [-state ...]
   sidekick context <dir>                                 show a page with this pane's next question
   sidekick template <dir>                                start a review page in <dir>/index.html

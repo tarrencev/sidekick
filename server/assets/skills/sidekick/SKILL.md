@@ -51,6 +51,12 @@ It returns at once and the answer arrives the same way. Add `-context <dir>` to 
 page with the question. Use `-wait 30m` only if you truly
 have nothing else to do.
 
+A tool that acts on an answer (for example one that records an approval only
+after the user approved that exact item) reads it back by id with
+`sidekick item <id>`, which prints the question's state and answers as JSON,
+rather than trusting text typed into the pane. `sidekick ask -json` prints the
+new question, id included.
+
 ## 2. Ask for a review
 
 When you've made something the user should look at (a page, a report, a design,
