@@ -37,13 +37,15 @@ const (
 	nudgeGap       = 30 * time.Minute   // at most one reconcile request per project per this
 	editGrace      = 10 * time.Minute   // a plan edited this recently is left alone
 	busyPatience   = time.Hour          // a reconcile waits this long for a busy coordinator
+	inboxStale     = 12 * time.Hour     // an ask waiting this long is checked with the coordinator
 )
 
 // Drift is one way the page differs from what Sidekick observes. Keys identify a
 // difference so the coordinator is asked about it once, not on every pass.
 type Drift struct {
-	Key  string `json:"key"`
-	Text string `json:"text"`
+	Key   string `json:"key"`
+	Text  string `json:"text"`
+	Inbox bool   `json:"inbox,omitempty"` // about the user's inbox, not the page
 }
 
 // reconcileState is the daemon's memory of a project's page, kept beside the plan.
@@ -54,6 +56,16 @@ type reconcileState struct {
 	Nudged    []string             `json:"nudged,omitempty"`    // differences in the outstanding request
 	NudgedAt  time.Time            `json:"nudgedAt,omitzero"`
 	Attempts  int                  `json:"attempts,omitempty"`
+	// Asked: a reconcile request is outstanding. RequestedAt: the user last pulled
+	// to refresh.
+	Asked       bool      `json:"asked,omitempty"`
+	RequestedAt time.Time `json:"requestedAt,omitzero"`
+}
+
+// checking reports whether the app should show that Sidekick is waiting on the
+// coordinator to bring the page up to date.
+func (st reconcileState) checking(now time.Time) bool {
+	return st.Asked && now.Sub(st.NudgedAt) < checkingFor
 }
 
 func (s *Store) reconcilePath(project string) string {
@@ -216,6 +228,33 @@ func reconcile(f pageFacts) (*Plan, []Drift) {
 		view = &v
 	}
 
+	// The inbox: asks from finished threads, long-waiting asks, near-duplicates.
+	var pending []Item
+	for _, it := range f.Items {
+		if it.State == StatePending && isAsk(it) {
+			pending = append(pending, it)
+		}
+	}
+	addInbox := func(key, format string, args ...any) {
+		drifts = append(drifts, Drift{Key: key, Text: fmt.Sprintf(format, args...), Inbox: true})
+	}
+	for i, it := range pending {
+		if it.Thread != "" {
+			if t, ok := f.Threads[it.Thread]; !ok || t.Status == "resolved" {
+				addInbox("inbox-thread:"+it.ID, "Inbox %s %s (%q) came from thread %s, which %s, but it still waits on the user.",
+					it.Kind, it.ID, itemLabel(it), it.Thread, map[bool]string{true: "was resolved", false: "doesn't exist"}[ok])
+			}
+		}
+		if age := f.Now.Sub(it.Created); age > inboxStale {
+			addInbox("inbox-age:"+it.ID, "Inbox %s %s (%q) has waited on the user for %s. Is it still needed, and still worded right?", it.Kind, it.ID, itemLabel(it), roughAgo(age))
+		}
+		for _, other := range pending[i+1:] {
+			if similar(it, other) {
+				addInbox("inbox-dup:"+it.ID+":"+other.ID, "Inbox items %s and %s look like the same request (%q / %q).", it.ID, other.ID, itemLabel(it), itemLabel(other))
+			}
+		}
+	}
+
 	switch {
 	case f.Status == nil:
 		if len(open) > 0 {
@@ -351,8 +390,8 @@ func (s *Server) pageLocked(project string) (*Plan, []Drift, reconcileState) {
 	}
 	st.Acked = still
 	if view != nil {
-		view.Stale = len(open) > 0
-		view.Checking = len(st.Nudged) > 0 && st.NudgedAt.After(view.Checked)
+		view.Stale = slices.ContainsFunc(open, func(d Drift) bool { return !d.Inbox })
+		view.Checking = st.checking(f.Now)
 	}
 	if after, _ := json.Marshal(st); string(after) != string(before) {
 		s.store.setReconcileState(project, st)
@@ -374,7 +413,7 @@ func (s *Server) reconciled(project string, confirm bool) {
 	}
 	slices.Sort(st.Acked)
 	st.Acked = slices.Compact(st.Acked)
-	st.Nudged, st.Attempts = nil, 0
+	st.Nudged, st.Attempts, st.Asked = nil, 0, false
 	s.store.setReconcileState(project, st)
 	s.store.Publish(project)
 }
@@ -432,7 +471,7 @@ func (s *Server) reconcileProject(pr Project, busy map[string]time.Time) {
 	} else {
 		cur.Attempts = 1
 	}
-	cur.Nudged, cur.NudgedAt = keys, now
+	cur.Nudged, cur.NudgedAt, cur.Asked = keys, now, true
 	s.store.setReconcileState(pr.Slug, cur)
 	s.store.Publish(pr.Slug)
 }
@@ -479,7 +518,15 @@ func (s *Server) reconcileMessage(project string, view *Plan, drifts []Drift) st
 		b.WriteString("Headline: (none)\n")
 	}
 	b.WriteString(planText(view))
+	pending := s.pendingAsks(project, "")
+	if len(pending) > 0 {
+		b.WriteString("Waiting on the user in their Sidekick inbox:\n")
+		b.WriteString(inboxText(pending, time.Now()))
+	}
 	b.WriteString("\nReconcile it in one pass, without stopping other work: run `sidekick plan -show > plan.json`, edit it to match reality (stages, merge order, new or finished threads, focus), and publish it with `sidekick plan -f plan.json`. Update `sidekick status` too if the headline or summary changed. If everything above is already right, run `sidekick plan -confirm` so Sidekick stops asking.")
+	if len(pending) > 0 {
+		b.WriteString("\n\nAlso keep the inbox to what still needs the user: withdraw anything that's already decided, moot or superseded (`sidekick withdraw <id> -reason \"…\"`, for threads' items too). Where several items ask about the same thing, ask one clear combined question (`sidekick ask … -replaces <id>`, or AskUserQuestion then withdraw the old ones). Keep each remaining ask short and unambiguous.")
+	}
 	return b.String()
 }
 

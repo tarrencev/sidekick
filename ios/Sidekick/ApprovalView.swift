@@ -73,6 +73,7 @@ struct ApprovalView: View {
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if item.isPending { decision } else { outcome }
         }
+        .dismissable(item)
         .onAppear { tray.project = item.project }
         .confirmationDialog(item.kind == .proposal ? "Decline this thread?" : "Reject this?", isPresented: $confirmReject, titleVisibility: .visible) {
             Button(item.kind == .proposal ? "Decline" : "Reject", role: .destructive) { send(.reject) }

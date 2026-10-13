@@ -41,6 +41,10 @@ func main() {
 		err = cmdPlan(args)
 	case "propose":
 		err = cmdPropose(args)
+	case "withdraw":
+		err = cmdWithdraw(args)
+	case "inbox":
+		err = cmdInbox(args)
 	case "verify":
 		err = cmdVerify(args)
 	case "reply":

@@ -53,7 +53,7 @@ struct ProjectView: View {
         .readingRoom()
         .inlineTitle()
         .composer(.project(slug))
-        .refreshable { await model.refresh(slug) }
+        .refreshable { await model.requestRefresh(slug) }
         .task { await model.refresh(slug) }
     }
 
@@ -62,6 +62,16 @@ struct ProjectView: View {
             Text(d.name)
                 .font(Theme.serif(32))
                 .foregroundStyle(Theme.text)
+            if d.checking == true {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.mini)
+                    Text("Asking the coordinator for an update")
+                }
+                .font(.ui(size: 12))
+                .foregroundStyle(Theme.tertiary)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("project.refreshing")
+            }
             if let status = d.status {
                 Text("\(status.tone.label) · updated \(status.updated.ago)")
                     .font(.ui(size: 12))

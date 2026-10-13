@@ -21,6 +21,8 @@ struct ProjectDetail: Codable, Equatable {
     let threadsList: [Thread]
     let plan: Plan?
     let prs: [String: PRStatus]?
+    /// The coordinator was asked to bring the page up to date (pull to refresh).
+    let checking: Bool?
 }
 
 /// The coordinator's structured plan.
@@ -178,6 +180,8 @@ struct Item: Codable, Identifiable, Hashable {
     let error: String?
     let seen: Bool?
     let attachments: [Attachment]?
+    /// Why an ask closed without an answer: replaced, withdrawn, dismissed.
+    let reason: String?
 
     enum Kind: String, Codable { case question, review, message, proposal }
 
@@ -244,7 +248,8 @@ extension Item {
         case "approved": "Approved"
         case "changes": "Changes requested"
         case "rejected": kind == .proposal ? "Declined" : "Rejected"
-        case "cancelled": "Withdrawn"
+        case "cancelled": reason?.hasPrefix("Replaced") == true ? "Replaced by a newer version" : "Withdrawn"
+        case "dismissed": "Dismissed"
         default: "Pending"
         }
     }

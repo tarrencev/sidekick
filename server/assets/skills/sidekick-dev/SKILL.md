@@ -34,6 +34,14 @@ project and per thread:
   waiting up to an hour for the coordinator pane to be idle. Republishing the plan or
   status settles the drift it was told about; `sidekick plan -confirm` settles all and
   resets the staleness clock. State: `~/.sidekick/status/<project>.reconcile.json`.
+- **Inbox hygiene (`server/inbox.go`):** user dismiss (`/api/items/{id}/dismiss`, state
+  `dismissed`, delivered to the agent as a verdict); agent withdraw (`/v1/items/{id}/
+  withdraw`, threads own items, coordinator any in project) and `sidekick inbox`;
+  `supersede` closes a pending ask the new one repeats (same project, thread, kind;
+  all its questions/title included) or names in `replaces`. Inbox drifts (resolved
+  thread, >12h, `similar` near-duplicates) go into page checks but don't mark the page
+  stale. Pull to refresh: `/api/projects/{slug}/refresh` sends a page check now
+  (once per 3 min) and nudges threads with summaries >30 min old; `checking` shows it.
 - **Provenance:** everything Sidekick types into a pane is tagged `[sidekick msg:<id>]`
   or `[sidekick verdict:<id>]`. Agents see it as pasted text and may distrust it, so the
   UserPromptSubmit hook (`sidekick hook claude-prompt`) checks the id with the daemon

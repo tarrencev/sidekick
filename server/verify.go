@@ -27,7 +27,7 @@ func (s *Server) verify(w http.ResponseWriter, r *http.Request) {
 	case "msg":
 		valid = valid && it.Kind == "message"
 	case "verdict":
-		valid = valid && (it.Kind == "review" || it.Kind == "proposal") && it.State != StatePending
+		valid = valid && (it.Kind == "review" || it.Kind == "proposal" || it.State == StateDismissed) && it.State != StatePending
 	case "notice":
 		valid = valid && it.Kind == "notice"
 	case "answer":

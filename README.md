@@ -51,7 +51,12 @@ the merge order, finished work fades and then clears, and new threads the plan d
 mention are listed. When something needs judgment, Sidekick sends the coordinator the
 page as you see it with exactly what changed, at most every 30 minutes and only when
 the coordinator is idle. The page says when it was last confirmed, and when it's being
-checked.
+checked. Pull down on a project to ask its coordinator and threads for an update now.
+
+**An inbox that stays short.** Swipe left to dismiss anything that no longer needs you,
+and the agent is told. Agents withdraw asks that went moot, a repeated question replaces
+the earlier one, and page checks ask the coordinator to clear stale asks and merge
+near-duplicates into one clear question.
 
 **Mac app.** The same app on the Mac: projects and inbox in a sidebar, a menu bar item
 with what's waiting, a Dock badge, Return to send, drag-and-drop attachments.

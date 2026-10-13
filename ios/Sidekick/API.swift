@@ -48,6 +48,15 @@ struct API {
         try await post("api/items/\(item.id)/answer", body: ["answers": answers])
     }
 
+    func dismiss(_ item: Item, reason: String) async throws {
+        try await post("api/items/\(item.id)/dismiss", body: ["reason": reason])
+    }
+
+    /// Asks the coordinator (and threads with old summaries) to bring the page up to date.
+    func requestRefresh(_ slug: String) async throws {
+        try await post("api/projects/\(slug)/refresh", body: [String: String]())
+    }
+
     enum Verdict: String { case approve, changes, reject }
 
     func review(_ item: Item, _ verdict: Verdict, comment: String, attachments: [String] = []) async throws {

@@ -48,7 +48,17 @@ struct InboxView: View {
                     .listRowBackground(Theme.background)
                     .listRowSeparatorTint(Theme.line)
                     .swipeActions(edge: .leading, allowsFullSwipe: true) { approveAction(entry.item) }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: false) { rejectAction(entry.item) }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                        rejectAction(entry.item)
+                        dismissAction(entry.item)
+                    }
+                    .contextMenu {
+                        if entry.item.isPending {
+                            Button("No longer needed", systemImage: "tray.and.arrow.down") {
+                                act { try await model.dismiss(entry.item, reason: "No longer needed") }
+                            }
+                        }
+                    }
             }
         }
         .listStyle(.plain)
@@ -110,6 +120,18 @@ struct InboxView: View {
                 Label("Read", systemImage: "envelope.open")
             }
             .tint(Theme.surface)
+        }
+    }
+
+    /// Clears an ask that doesn't need the user any more; the agent is told.
+    @ViewBuilder private func dismissAction(_ item: Item) -> some View {
+        if item.isPending {
+            Button {
+                act { try await model.dismiss(item, reason: "No longer needed") }
+            } label: {
+                Label("Dismiss", systemImage: "tray.and.arrow.down")
+            }
+            .tint(Color(white: 0.32))
         }
     }
 

@@ -47,6 +47,8 @@ type Item struct {
 	// Files the user sent with a message, a review verdict or an answer.
 	Attachments []Attachment `json:"attachments,omitempty"`
 	Error       string       `json:"error,omitempty"`
+	// Reason says why an ask closed without an answer: replaced, withdrawn, dismissed.
+	Reason string `json:"reason,omitempty"`
 }
 
 const (
@@ -58,6 +60,7 @@ const (
 	StateCancelled = "cancelled"
 	StateReplied   = "replied"
 	StateFailed    = "failed"
+	StateDismissed = "dismissed" // the user said it no longer needs them
 )
 
 type Question struct {

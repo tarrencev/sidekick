@@ -32,6 +32,7 @@ struct QuestionView: View {
         .readingRoom()
         .hidesTabBar()
         .navigationTitle("Answer question")
+        .dismissable(item)
         .inlineTitle()
         .composer(ComposerTarget(item), tabBar: false)
         .safeAreaInset(edge: .bottom) {

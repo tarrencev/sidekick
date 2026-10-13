@@ -124,7 +124,7 @@ func TestReconcileBlockedOnUser(t *testing.T) {
 	if len(drifts) != 1 || !strings.HasPrefix(drifts[0].Key, "ask:Spend:") {
 		t.Fatalf("blocked on the user with nothing in the inbox: %+v", drifts)
 	}
-	f.Items = []Item{{ID: "q1", Kind: "question", Thread: "t-1", State: StatePending}}
+	f.Items = []Item{{ID: "q1", Kind: "question", Thread: "t-1", State: StatePending, Created: now}}
 	view, drifts := reconcile(f)
 	if len(drifts) != 0 || view.Work[0].Ask != "q1" {
 		t.Errorf("a pending question unblocks it: %+v %+v", drifts, view.Work[0])

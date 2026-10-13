@@ -27,6 +27,10 @@ func NewDeliverer(store *Store, hpBin, herdrBin string) *Deliverer {
 			d.Enqueue(it.ID)
 			continue
 		}
+		if it.State == StateDismissed && !it.Delivered {
+			d.Enqueue(it.ID)
+			continue
+		}
 		if (it.Kind == "review" || it.Kind == "proposal") && (it.State == StateApproved || it.State == StateChanges || it.State == StateRejected) && !it.Delivered {
 			d.Enqueue(it.ID)
 		}
@@ -97,6 +101,9 @@ func (d *Deliverer) Prompt(project, thread, text string) error {
 }
 
 func verdictMessage(it Item) string {
+	if it.State == StateDismissed {
+		return dismissedMessage(it)
+	}
 	switch it.Kind {
 	case "proposal":
 		return proposalMessage(it)
@@ -158,6 +165,18 @@ func proposalMessage(it Item) string {
 // verdictMarker tags a delivered decision so the prompt hook can verify it came
 // from the user through Sidekick.
 func verdictMarker(id string) string { return "[sidekick verdict:" + id + "]" }
+
+// dismissedMessage tells an agent the user cleared its ask from their inbox.
+func dismissedMessage(it Item) string {
+	what := map[string]string{"question": "question", "review": "review", "proposal": "proposed thread"}[it.Kind]
+	var b strings.Builder
+	fmt.Fprintf(&b, "%s The user dismissed your %s %q from their Sidekick inbox as no longer needed.", verdictMarker(it.ID), what, itemLabel(it))
+	if it.Reason != "" {
+		fmt.Fprintf(&b, " Their note: %s", it.Reason)
+	}
+	b.WriteString(" Don't wait on it, and don't act on a guess about it. If it still matters, ask again with the current details, as one short, unambiguous request.")
+	return b.String()
+}
 
 // answerMessage delivers the user's answer to an async question.
 func answerMessage(it Item) string {

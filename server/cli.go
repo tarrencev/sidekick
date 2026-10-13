@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -104,6 +105,7 @@ func cmdAsk(args []string) error {
 	wait := fs.Duration("wait", 0, "block until answered, up to this long (default: don't wait; the answer arrives in your pane)")
 	jsonOut := fs.Bool("json", false, "print the full item as JSON")
 	contextDir := fs.String("context", "", "a self-explaining HTML page (dir or file) shown with the question")
+	replaces := fs.String("replaces", "", "id of a pending ask this question replaces (withdraws it)")
 	fs.Parse(reorder(args))
 	if fs.NArg() != 1 {
 		return errors.New(`usage: sidekick ask "<question>" [-o <option>]... [-context <dir>]`)
@@ -122,7 +124,7 @@ func cmdAsk(args []string) error {
 	}
 	if *wait == 0 {
 		var it Item
-		if err := call(context.Background(), "POST", "/v1/ask", map[string]any{"origin": currentOrigin(""), "questions": []Question{q}, "async": true, "context": *contextDir}, &it); err != nil {
+		if err := call(context.Background(), "POST", "/v1/ask", map[string]any{"origin": currentOrigin(""), "questions": []Question{q}, "async": true, "context": *contextDir, "replaces": *replaces}, &it); err != nil {
 			return err
 		}
 		fmt.Printf("Sent to the user's Sidekick inbox. Keep working on anything that doesn't depend on it; their answer will arrive in this pane as a message starting with [sidekick answer:%s].\n", it.ID)
@@ -415,5 +417,46 @@ func cmdContext(args []string) error {
 		return err
 	}
 	fmt.Printf("Context ready (%s). Ask your question now (AskUserQuestion or sidekick ask): the next question from this pane shows it.\n", out["url"])
+	return nil
+}
+
+// cmdWithdraw takes back an ask that no longer needs the user.
+func cmdWithdraw(args []string) error {
+	fs := flag.NewFlagSet("withdraw", flag.ExitOnError)
+	reason := fs.String("reason", "", "why it's no longer needed (shown to the user)")
+	fs.Parse(reorder(args))
+	if fs.NArg() == 0 {
+		return errors.New(`usage: sidekick withdraw <id>... [-reason "already decided in chat"]`)
+	}
+	for _, id := range fs.Args() {
+		var it Item
+		if err := call(context.Background(), "POST", "/v1/items/"+url.PathEscape(id)+"/withdraw", map[string]any{"origin": currentOrigin(""), "reason": *reason}, &it); err != nil {
+			return fmt.Errorf("%s: %w", id, err)
+		}
+		fmt.Printf("Withdrew %s from the user's inbox.\n", id)
+	}
+	return nil
+}
+
+// cmdInbox lists what's waiting on the user from you (the coordinator: the whole project).
+func cmdInbox(args []string) error {
+	var out struct {
+		Project string
+		Items   []InboxEntry
+	}
+	if err := call(context.Background(), "POST", "/v1/inbox", map[string]any{"origin": currentOrigin("")}, &out); err != nil {
+		return err
+	}
+	if len(out.Items) == 0 {
+		fmt.Printf("Nothing from %s is waiting on the user.\n", out.Project)
+		return nil
+	}
+	for _, e := range out.Items {
+		who := "coordinator"
+		if e.Thread != "" {
+			who = e.Thread
+		}
+		fmt.Printf("%s  %-8s %-12s %s ago  %s\n", e.ID, e.Kind, who, roughAgo(time.Since(e.Created)), e.Text)
+	}
 	return nil
 }

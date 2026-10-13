@@ -175,7 +175,32 @@ sidekick propose "Pre-size shop images" -why "Phones still download 2-4 MB origi
 The decision arrives as a `[sidekick] Your proposed thread …` message: approved (start
 it), changes (revise and propose again), or declined (drop it).
 
-## 5. Messages from the user
+## 5. Keep the inbox to what still needs the user
+
+Every ask costs the user attention, so keep the inbox short and current:
+
+- **Don't repeat yourself.** Asking the same question again (from the same pane)
+  replaces the pending one automatically. To replace a differently worded ask, pass
+  its id: `sidekick ask "…" -replaces <id>`, `sidekick review … -replaces <id>`.
+- **Combine.** Several decisions about one thing go in one AskUserQuestion call (up to
+  4 questions), each short, concrete and unambiguous, recommended option first.
+- **Withdraw what's moot.** When an ask is decided another way, overtaken, or no longer
+  matters, take it back: `sidekick withdraw <id> -reason "decided in chat"`. See what's
+  waiting with `sidekick inbox` (the coordinator sees its whole project and can
+  withdraw threads' asks too).
+- **Dismissed by the user.** The user can clear an ask themselves. You'll get
+  `[sidekick verdict:<id>] The user dismissed your …`: don't wait on it or guess; if it
+  still matters, ask again with current details.
+
+The coordinator's page checks list the project's pending inbox and flag asks from
+finished threads, asks waiting more than 12 hours, and near-duplicates. Withdraw or
+merge as needed in the same pass.
+
+When the user pulls to refresh a project page, the coordinator gets a page check right
+away (even if nothing drifted), and threads with summaries older than 30 minutes are
+asked to update theirs. Do it between steps.
+
+## 6. Messages from the user
 
 The user can write to you from the app. Their message arrives in your pane starting
 with `[sidekick msg:<id>]`; their review and proposal decisions start with

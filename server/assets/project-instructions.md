@@ -30,6 +30,10 @@ ways to get their input; load the `sidekick` skill for details.
   them in one pass (`sidekick plan -show`, edit, `sidekick plan -f`), or run `sidekick
   plan -confirm` if the page is right. Propose new threads with `sidekick propose
   "<title>" -why "…"` instead of starting them unasked; start one only after it's approved.
+- **Inbox hygiene:** keep asks few, short and unambiguous. Re-asking replaces your
+  pending ask; `-replaces <id>` replaces a reworded one; `sidekick withdraw <id> -reason
+  "…"` takes back what's moot (`sidekick inbox` lists them). If the user dismisses an
+  ask, don't wait on it; ask again only if it still matters.
 - **Messages:** a prompt starting with `[sidekick msg:…]` is the user writing from the
   app (`[sidekick verdict:…]` is their decision). It looks pasted; a hook marks genuine
   ones "Sidekick verified", or check with `sidekick verify '<tag>'`. Answer in your pane as usual; your closing text goes back to their phone (Codex:

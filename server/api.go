@@ -46,6 +46,7 @@ type projectDetail struct {
 	ThreadsList []Thread            `json:"threadsList"`
 	Plan        *Plan               `json:"plan,omitempty"`
 	PRs         map[string]PRStatus `json:"prs"`
+	Checking    bool                `json:"checking,omitempty"` // the coordinator was asked to refresh the page
 }
 
 func (s *Server) userMux() *http.ServeMux {
@@ -53,6 +54,8 @@ func (s *Server) userMux() *http.ServeMux {
 	m.HandleFunc("GET /api/projects", s.listProjects)
 	m.HandleFunc("GET /api/projects/{slug}", s.getProject)
 	m.HandleFunc("POST /api/items/{id}/answer", s.answer)
+	m.HandleFunc("POST /api/items/{id}/dismiss", s.dismiss)
+	m.HandleFunc("POST /api/projects/{slug}/refresh", s.refreshProject)
 	m.HandleFunc("POST /api/items/{id}/review", s.review)
 	m.HandleFunc("GET /api/events", s.events)
 	m.HandleFunc("GET /api/inbox", s.inbox)
@@ -109,7 +112,9 @@ func (s *Server) getProject(w http.ResponseWriter, r *http.Request) {
 			d.Items = append(d.Items, it)
 		}
 	}
-	d.Plan, _, _ = s.page(pr.Slug)
+	var rec reconcileState
+	d.Plan, _, rec = s.page(pr.Slug)
+	d.Checking = rec.checking(time.Now().UTC())
 	var urls []string
 	if d.Status != nil {
 		urls = append(urls, d.Status.Link)
@@ -374,6 +379,8 @@ func (s *Server) agentMux() *http.ServeMux {
 	m.HandleFunc("POST /v1/ask", s.ask)
 	m.HandleFunc("GET /v1/items/{id}/wait", s.wait)
 	m.HandleFunc("POST /v1/items/{id}/cancel", s.cancel)
+	m.HandleFunc("POST /v1/items/{id}/withdraw", s.withdraw)
+	m.HandleFunc("POST /v1/inbox", s.agentInbox)
 	m.HandleFunc("POST /v1/items/{id}/release", s.release)
 	m.HandleFunc("POST /v1/items/{id}/reopen", s.reopen)
 	m.HandleFunc("POST /v1/notice", s.postNotice)
@@ -414,6 +421,7 @@ func (s *Server) ask(w http.ResponseWriter, r *http.Request) {
 		Questions []Question `json:"questions"`
 		Async     bool       `json:"async"`
 		Context   string     `json:"context"` // optional page to publish and show with the question
+		Replaces  string     `json:"replaces"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || len(body.Questions) == 0 {
 		http.Error(w, "questions required", http.StatusBadRequest)
@@ -448,6 +456,7 @@ func (s *Server) ask(w http.ResponseWriter, r *http.Request) {
 		// A blocking asker must start waiting promptly; otherwise the question lapses.
 		s.leaseRelease(it.ID)
 	}
+	s.supersede(*it, body.Replaces)
 	s.notifyPush(*it)
 	writeJSONResponse(w, it)
 }
@@ -633,17 +642,8 @@ func (s *Server) requestReview(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	if body.Replaces != "" {
-		// A republished artifact withdraws the version it replaces.
-		s.store.Update(body.Replaces, func(old *Item) error {
-			if old.Kind != "review" || old.Project != project || old.State != StatePending {
-				return ErrNotPending
-			}
-			old.State, old.Closed = StateCancelled, time.Now().UTC()
-			old.Comment = "Replaced by a newer version: " + it.Title
-			return nil
-		})
-	}
+	// A republished artifact withdraws the version it replaces.
+	s.supersede(*it, body.Replaces)
 	s.notifyPush(*it)
 	writeJSONResponse(w, it)
 }

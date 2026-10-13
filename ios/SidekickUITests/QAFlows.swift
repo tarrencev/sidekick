@@ -253,6 +253,45 @@ final class QAFlows: XCTestCase {
         XCTAssertEqual((Demo.item(qid)?["answers"] as? [String: String])?[q], "Yes (Recommended)")
     }
 
+    /// Swipe left and Dismiss clears an ask that's no longer needed; the agent is told.
+    func testDismissFromInbox() {
+        let q = unique("QA dismiss: still need the old banner copy?")
+        let id = Demo.ask(pane: "w1:p1", q, options: ["Yes", "No"])
+        app.tabBars.buttons["Inbox"].tap()
+        XCTAssertTrue(text(q).waitForExistence(timeout: 10))
+        text(q).swipeLeft()
+        XCTAssertTrue(app.buttons["Dismiss"].waitForExistence(timeout: 3))
+        app.buttons["Dismiss"].tap()
+        XCTAssertTrue(text(q).waitForNonExistence(timeout: 10))
+        XCTAssertEqual(Demo.item(id)?["state"] as? String, "dismissed")
+    }
+
+    /// The toolbar's Dismiss on an open question asks why, then clears it.
+    func testDismissFromQuestion() {
+        let q = unique("QA dismiss: pick a font for the old banner?")
+        let id = Demo.ask(pane: "w1:p1", q, options: ["Serif", "Sans"])
+        openInbox("pick a font for the old banner")
+        app.buttons["item.dismiss"].tap()
+        XCTAssertTrue(app.buttons["Already handled"].waitForExistence(timeout: 3))
+        app.buttons["Already handled"].tap()
+        XCTAssertTrue(app.staticTexts["Inbox"].waitForExistence(timeout: 10))
+        let it = Demo.item(id)
+        XCTAssertEqual(it?["state"] as? String, "dismissed")
+        XCTAssertEqual(it?["reason"] as? String, "Already handled")
+    }
+
+    /// Pulling down on a project asks the coordinator to update it, and says so.
+    func testPullToRefreshAsksCoordinator() {
+        openProject("Field App")
+        XCTAssertTrue(text("Offline sync in progress").waitForExistence(timeout: 10))
+        let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.3))
+        start.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9)))
+        XCTAssertTrue(app.descendants(matching: .any)["project.refreshing"].waitForExistence(timeout: 10), "the page says it asked the coordinator")
+        let detail = Demo.request(Demo.app.appending(path: "api/projects/field")) as? [String: Any]
+        XCTAssertEqual(detail?["checking"] as? Bool, true)
+        shot("qa-pull-refresh")
+    }
+
     // MARK: Chat
 
     func testChatRoundTrip() {

@@ -121,6 +121,17 @@ final class AppModel {
         await refreshAfterAction(item.project)
     }
 
+    func dismiss(_ item: Item, reason: String = "") async throws {
+        try await api?.dismiss(item, reason: reason)
+        await refreshAfterAction(item.project)
+    }
+
+    /// Pull to refresh on a project: ask its agents to update the page, then reload.
+    func requestRefresh(_ slug: String) async {
+        try? await api?.requestRefresh(slug)
+        await refresh(slug)
+    }
+
     func review(_ item: Item, _ verdict: API.Verdict, comment: String, attachments: [String] = []) async throws {
         try await api?.review(item, verdict, comment: comment, attachments: attachments)
         await refreshAfterAction(item.project)
