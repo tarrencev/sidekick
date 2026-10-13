@@ -59,7 +59,7 @@ func cmdPromptHook() error {
 	if call(ctx, "POST", "/v1/verify", map[string]string{"kind": m[1], "id": m[2]}, &out) != nil || !out.Verified {
 		return nil
 	}
-	what := "a message the user wrote to you in the Sidekick app on their phone"
+	what := "a message the user wrote to you in the Sidekick app on their phone; answer as usual and your reply is relayed to them. If you propose new work, file it with `sidekick propose` rather than offering it in prose"
 	switch m[1] {
 	case "verdict":
 		what = "the user's decision, made in the Sidekick app on their phone"

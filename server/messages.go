@@ -37,9 +37,9 @@ func (s *Server) sendMessage(project, thread, text string, attachmentIDs ...stri
 	if err := s.store.Add(it); err != nil {
 		return Item{}, err
 	}
-	prompt := fmt.Sprintf("%s The user wrote this from the Sidekick app on their phone. Answer in this pane as you normally would; your reply is relayed to them. "+
-		"If your answer proposes new work (a thread to start), don't just offer it in prose: file it with `sidekick propose` so it lands in their inbox to approve.\n\n%s",
-		messageMarker(it.ID), text) + attachmentNote(atts)
+	// Just the tag and the user's words: the prompt hook tells the agent where it came
+	// from, and the Stop hook relays whatever it answers.
+	prompt := messageMarker(it.ID) + " " + text + attachmentNote(atts)
 	if err := s.deliver.Prompt(project, thread, prompt); err != nil {
 		who := "The coordinator"
 		if thread != "" {
