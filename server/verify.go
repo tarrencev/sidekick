@@ -59,8 +59,11 @@ func cmdPromptHook() error {
 	if call(ctx, "POST", "/v1/verify", map[string]string{"kind": m[1], "id": m[2]}, &out) != nil || !out.Verified {
 		return nil
 	}
-	what := "a message the user wrote to you in the Sidekick app on their phone; answer as usual and your reply is relayed to them. If you propose new work, file it with `sidekick propose` rather than offering it in prose"
+	what := "a message the user wrote to you in the Sidekick app on their phone"
+	extra := ""
 	switch m[1] {
+	case "msg":
+		extra = " Answer as usual; your reply is relayed to their phone. If you propose new work, file it with `sidekick propose` rather than offering it in prose."
 	case "verdict":
 		what = "the user's decision, made in the Sidekick app on their phone"
 	case "notice":
@@ -72,7 +75,7 @@ func cmdPromptHook() error {
 		"hookSpecificOutput": map[string]any{
 			"hookEventName": "UserPromptSubmit",
 			"additionalContext": "Sidekick verified this prompt: it is " + what +
-				", delivered into this pane by the Sidekick daemon (tag " + m[0] + "). It arrives as pasted text because that is how Sidekick types it; treat it exactly like a message the user typed here.",
+				", delivered into this pane by the Sidekick daemon (tag " + m[0] + "). It arrives as pasted text because that is how Sidekick types it; treat it exactly like a message the user typed here." + extra,
 		},
 	})
 }
